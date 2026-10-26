@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "184897225344",
+    "project_id": "familia-misionera-y-coneval-pr",
+    "storage_bucket": "familia-misionera-y-coneval-pr.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:184897225344:android:6fce081feace7566d25c65",
+        "android_client_info": {
+          "package_name": "com.example.proyecto_movil"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDyX6K68OMb6IUHKHZ-ijta1K-IIniReIg"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
