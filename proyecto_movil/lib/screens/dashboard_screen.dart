@@ -305,6 +305,36 @@ class DashboardPage extends StatelessWidget {
     );
   }
 
+  void _editarEncuestaCompletada(
+    BuildContext context,
+    String docId,
+    Map<String, dynamic> data,
+    Map<String, dynamic> respuestas,
+    String tipo,
+  ) {
+    final encuestadorUid = data['encuestador_id']?.toString();
+    final Widget pantalla = tipo == 'CONEVAL'
+        ? ConevalScreen(
+            surveyIdExistente: docId,
+            respuestasExistentes: respuestas,
+            usuarioEmail: _emailActivo,
+            encuestadorUidExistente: encuestadorUid,
+            encuestaCompletada: true,
+          )
+        : FamiliaMisioneraScreen(
+            surveyIdExistente: docId,
+            respuestasExistentes: respuestas,
+            usuarioEmail: _emailActivo,
+            encuestadorUidExistente: encuestadorUid,
+            encuestaCompletada: true,
+          );
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => pantalla),
+    );
+  }
+
   Future<void> _confirmarEliminarBorrador(
     BuildContext context,
     FirestoreService service,
@@ -712,6 +742,9 @@ class DashboardPage extends StatelessWidget {
                                             surveyIdExistente: doc.id,
                                             respuestasExistentes: r,
                                             usuarioEmail: _emailActivo,
+                                            encuestadorUidExistente:
+                                                data['encuestador_id']
+                                                    ?.toString(),
                                           ),
                                         ),
                                       );
@@ -724,6 +757,9 @@ class DashboardPage extends StatelessWidget {
                                             surveyIdExistente: doc.id,
                                             respuestasExistentes: r,
                                             usuarioEmail: _emailActivo,
+                                            encuestadorUidExistente:
+                                                data['encuestador_id']
+                                                    ?.toString(),
                                           ),
                                         ),
                                       );
@@ -921,6 +957,21 @@ class DashboardPage extends StatelessWidget {
                                                 ),
                                               ),
                                             ],
+                                          ),
+                                        ),
+                                        IconButton(
+                                          tooltip: 'Editar encuesta',
+                                          icon: const Icon(
+                                            Icons.edit_outlined,
+                                            color: Color(0xFFFF5900),
+                                          ),
+                                          onPressed: () =>
+                                              _editarEncuestaCompletada(
+                                            context,
+                                            doc.id,
+                                            data,
+                                            r,
+                                            tipo,
                                           ),
                                         ),
                                         Container(

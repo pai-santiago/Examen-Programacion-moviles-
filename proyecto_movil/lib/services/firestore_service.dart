@@ -73,10 +73,13 @@ class FirestoreService {
     required String comunidad,
     required String estado, // 'borrador' o 'completado'
     required Map<String, dynamic> respuestas,
+    String? encuestadorUid,
     List<Map<String, dynamic>> integrantes = const [],
     Map<String, dynamic>? resultadoPobreza,
   }) async {
-    final uid = _auth.currentUser?.uid ?? 'encuestador_anonimo';
+    final uid = encuestadorUid?.isNotEmpty == true
+        ? encuestadorUid!
+        : _auth.currentUser?.uid ?? 'encuestador_anonimo';
 
     final data = {
       'id': surveyId,
