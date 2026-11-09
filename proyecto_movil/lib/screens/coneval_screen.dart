@@ -1,8 +1,10 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import '../forms/jfm_questions.dart';
+
+import '../models/jfm_form_data.dart';
 import '../main.dart';
 import '../services/firestore_service.dart';
+import '../widgets/form_question_widgets.dart';
 
 class ConevalScreen extends StatefulWidget {
   final String? surveyIdExistente;
@@ -48,41 +50,49 @@ class _ConevalScreenState extends State<ConevalScreen> {
   @override
   void initState() {
     super.initState();
-    _surveyId = widget.surveyIdExistente ??
+    _surveyId =
+        widget.surveyIdExistente ??
         'coneval_${DateTime.now().millisecondsSinceEpoch}';
     final prev = widget.respuestasExistentes ?? {};
     final emailExistente = prev['misionero_aplica']?.toString().trim();
     _encuestadorEmail = emailExistente?.isNotEmpty == true
         ? emailExistente!
         : widget.usuarioEmail ??
-            FirebaseAuth.instance.currentUser?.email ??
-            'misionero_demo@anahuac.mx';
+              FirebaseAuth.instance.currentUser?.email ??
+              'misionero_demo@anahuac.mx';
 
     final sedesDisponibles = sedesComunidadesJfm.keys.toList();
     final sedePrev = prev['sede']?.toString() ?? 'Anáhuac Cancún';
-    _sede = sedesDisponibles.contains(sedePrev) ? sedePrev : sedesDisponibles.first;
+    _sede = sedesDisponibles.contains(sedePrev)
+        ? sedePrev
+        : sedesDisponibles.first;
 
     final comunidadesSede = sedesComunidadesJfm[_sede] ?? const ['Otra'];
     final comPrev = prev['comunidad']?.toString() ?? comunidadesSede.first;
-    _comunidad = comunidadesSede.contains(comPrev) ? comPrev : comunidadesSede.first;
+    _comunidad = comunidadesSede.contains(comPrev)
+        ? comPrev
+        : comunidadesSede.first;
 
-    _carenciaAlimentaria =
-        ['Si', 'No'].contains(prev['carencia_alimentaria'])
-            ? prev['carencia_alimentaria']
-            : 'No';
+    _carenciaAlimentaria = ['Si', 'No'].contains(prev['carencia_alimentaria'])
+        ? prev['carencia_alimentaria']
+        : 'No';
     _serviciosBasicos =
         ['Completos', 'Incompletos'].contains(prev['servicios_basicos'])
-            ? prev['servicios_basicos']
-            : 'Completos';
+        ? prev['servicios_basicos']
+        : 'Completos';
 
     _apellidoCtrl = TextEditingController(
-        text: prev['apellido_familia']?.toString() ?? '');
+      text: prev['apellido_familia']?.toString() ?? '',
+    );
     _habitantesCtrl = TextEditingController(
-        text: (prev['num_habitantes'] ?? '1').toString());
+      text: (prev['num_habitantes'] ?? '1').toString(),
+    );
     _ingresoCtrl = TextEditingController(
-        text: prev['ingreso_mensual']?.toString() ?? '');
+      text: prev['ingreso_mensual']?.toString() ?? '',
+    );
     _observacionesCtrl = TextEditingController(
-        text: prev['comentarios']?.toString() ?? '');
+      text: prev['comentarios']?.toString() ?? '',
+    );
   }
 
   @override
@@ -92,21 +102,6 @@ class _ConevalScreenState extends State<ConevalScreen> {
     _ingresoCtrl.dispose();
     _observacionesCtrl.dispose();
     super.dispose();
-  }
-
-  Widget _etiquetaPregunta(String titulo) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 6.0),
-      child: Text(
-        titulo,
-        style: const TextStyle(
-          fontWeight: FontWeight.w600,
-          fontSize: 14,
-          color: Colors.black87,
-          height: 1.3,
-        ),
-      ),
-    );
   }
 
   Future<void> _guardar({required String estado}) async {
@@ -137,11 +132,13 @@ class _ConevalScreenState extends State<ConevalScreen> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(estado == 'completado'
-              ? widget.encuestaCompletada
-                  ? 'Cambios guardados correctamente.'
-                  : '¡Diagnóstico CONEVAL finalizado y enviado!'
-              : 'Borrador CONEVAL autoguardado'),
+          content: Text(
+            estado == 'completado'
+                ? widget.encuestaCompletada
+                      ? 'Cambios guardados correctamente.'
+                      : '¡Diagnóstico CONEVAL finalizado y enviado!'
+                : 'Borrador CONEVAL autoguardado',
+          ),
           backgroundColor: Colors.green.shade700,
         ),
       );
@@ -151,9 +148,9 @@ class _ConevalScreenState extends State<ConevalScreen> {
       }
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error al guardar CONEVAL: $e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Error al guardar CONEVAL: $e')));
     } finally {
       if (mounted) setState(() => _guardando = false);
     }
@@ -162,14 +159,17 @@ class _ConevalScreenState extends State<ConevalScreen> {
   @override
   Widget build(BuildContext context) {
     final comunidades = sedesComunidadesJfm[_sede] ?? const ['Otra'];
-    final valorComunidad =
-        comunidades.contains(_comunidad) ? _comunidad : comunidades.first;
+    final valorComunidad = comunidades.contains(_comunidad)
+        ? _comunidad
+        : comunidades.first;
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.encuestaCompletada
-            ? 'Editar diagnóstico CONEVAL'
-            : 'Diagnóstico CONEVAL'),
+        title: Text(
+          widget.encuestaCompletada
+              ? 'Editar diagnóstico CONEVAL'
+              : 'Diagnóstico CONEVAL',
+        ),
         backgroundColor: red,
         foregroundColor: Colors.white,
         actions: [
@@ -181,10 +181,10 @@ class _ConevalScreenState extends State<ConevalScreen> {
             onPressed: _guardando
                 ? null
                 : () => _guardar(
-                      estado: widget.encuestaCompletada
-                          ? 'completado'
-                          : 'borrador',
-                    ),
+                    estado: widget.encuestaCompletada
+                        ? 'completado'
+                        : 'borrador',
+                  ),
           ),
         ],
       ),
@@ -219,7 +219,7 @@ class _ConevalScreenState extends State<ConevalScreen> {
             ),
             const SizedBox(height: 18),
 
-            _etiquetaPregunta('Sede'),
+            FormQuestionLabel(titulo: 'Sede'),
             DropdownButtonFormField<String>(
               key: ValueKey('coneval_sede_$_sede'),
               initialValue: _sede,
@@ -237,14 +237,13 @@ class _ConevalScreenState extends State<ConevalScreen> {
                 if (v == null) return;
                 setState(() {
                   _sede = v;
-                  _comunidad =
-                      (sedesComunidadesJfm[v] ?? const ['Otra']).first;
+                  _comunidad = (sedesComunidadesJfm[v] ?? const ['Otra']).first;
                 });
               },
             ),
             const SizedBox(height: 16),
 
-            _etiquetaPregunta('Comunidad'),
+            FormQuestionLabel(titulo: 'Comunidad'),
             DropdownButtonFormField<String>(
               key: ValueKey('coneval_com_${_sede}_$valorComunidad'),
               initialValue: valorComunidad,
@@ -264,7 +263,7 @@ class _ConevalScreenState extends State<ConevalScreen> {
             ),
             const SizedBox(height: 16),
 
-            _etiquetaPregunta('Apellido de la familia encuestada'),
+            FormQuestionLabel(titulo: 'Apellido de la familia encuestada'),
             TextFormField(
               controller: _apellidoCtrl,
               decoration: _decoracionCampo.copyWith(
@@ -273,7 +272,7 @@ class _ConevalScreenState extends State<ConevalScreen> {
             ),
             const SizedBox(height: 16),
 
-            _etiquetaPregunta('Número de integrantes del hogar'),
+            FormQuestionLabel(titulo: 'Número de integrantes del hogar'),
             TextFormField(
               controller: _habitantesCtrl,
               keyboardType: TextInputType.number,
@@ -281,48 +280,55 @@ class _ConevalScreenState extends State<ConevalScreen> {
             ),
             const SizedBox(height: 16),
 
-            _etiquetaPregunta('Ingreso mensual estimado del hogar (\$ MXN)'),
+            FormQuestionLabel(
+              titulo: 'Ingreso mensual estimado del hogar (\$ MXN)',
+            ),
             TextFormField(
               controller: _ingresoCtrl,
               keyboardType: TextInputType.number,
-              decoration: _decoracionCampo.copyWith(
-                hintText: 'Ej. 6500',
-              ),
+              decoration: _decoracionCampo.copyWith(hintText: 'Ej. 6500'),
             ),
             const SizedBox(height: 16),
 
-            _etiquetaPregunta(
-                '¿Presenta carencia por acceso a la alimentación?'),
+            FormQuestionLabel(
+              titulo: '¿Presenta carencia por acceso a la alimentación?',
+            ),
             DropdownButtonFormField<String>(
               key: ValueKey('coneval_alim_$_carenciaAlimentaria'),
               initialValue: _carenciaAlimentaria,
               isExpanded: true,
               decoration: _decoracionCampo,
-              items: const ['Si', 'No']
-                  .map((e) => DropdownMenuItem(value: e, child: Text(e)))
-                  .toList(),
+              items: const [
+                'Si',
+                'No',
+              ].map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
               onChanged: (v) {
                 if (v != null) setState(() => _carenciaAlimentaria = v);
               },
             ),
             const SizedBox(height: 16),
 
-            _etiquetaPregunta('Acceso a servicios básicos en la vivienda'),
+            FormQuestionLabel(
+              titulo: 'Acceso a servicios básicos en la vivienda',
+            ),
             DropdownButtonFormField<String>(
               key: ValueKey('coneval_serv_$_serviciosBasicos'),
               initialValue: _serviciosBasicos,
               isExpanded: true,
               decoration: _decoracionCampo,
-              items: const ['Completos', 'Incompletos']
-                  .map((e) => DropdownMenuItem(value: e, child: Text(e)))
-                  .toList(),
+              items: const [
+                'Completos',
+                'Incompletos',
+              ].map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
               onChanged: (v) {
                 if (v != null) setState(() => _serviciosBasicos = v);
               },
             ),
             const SizedBox(height: 16),
 
-            _etiquetaPregunta('Observaciones del diagnóstico comunitario'),
+            FormQuestionLabel(
+              titulo: 'Observaciones del diagnóstico comunitario',
+            ),
             TextFormField(
               controller: _observacionesCtrl,
               maxLines: 3,
@@ -339,14 +345,16 @@ class _ConevalScreenState extends State<ConevalScreen> {
                     onPressed: _guardando
                         ? null
                         : () => _guardar(
-                              estado: widget.encuestaCompletada
-                                  ? 'completado'
-                                  : 'borrador',
-                            ),
+                            estado: widget.encuestaCompletada
+                                ? 'completado'
+                                : 'borrador',
+                          ),
                     icon: const Icon(Icons.save_outlined),
-                    label: Text(widget.encuestaCompletada
-                        ? 'Guardar cambios'
-                        : 'Guardar Borrador'),
+                    label: Text(
+                      widget.encuestaCompletada
+                          ? 'Guardar cambios'
+                          : 'Guardar Borrador',
+                    ),
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -356,9 +364,11 @@ class _ConevalScreenState extends State<ConevalScreen> {
                         ? null
                         : () => _guardar(estado: 'completado'),
                     icon: const Icon(Icons.check_circle_outline),
-                    label: Text(widget.encuestaCompletada
-                        ? 'Guardar y cerrar'
-                        : 'Finalizar'),
+                    label: Text(
+                      widget.encuestaCompletada
+                          ? 'Guardar y cerrar'
+                          : 'Finalizar',
+                    ),
                   ),
                 ),
               ],

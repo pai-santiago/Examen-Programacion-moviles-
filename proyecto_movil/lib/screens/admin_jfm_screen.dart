@@ -1,8 +1,10 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
-import '../forms/jfm_questions.dart';
+
+import '../models/jfm_form_data.dart';
 import '../main.dart';
 import '../services/firestore_service.dart';
+import '../widgets/admin_dashboard_widgets.dart';
 
 class AdminJfmScreen extends StatefulWidget {
   const AdminJfmScreen({super.key});
@@ -170,12 +172,15 @@ class _AdminJfmScreenState extends State<AdminJfmScreen> {
   }
 
   void _mostrarFichaFamiliarJfm(
-      BuildContext context, Map<String, dynamic> docData) {
-    final respuestas =
-        Map<String, dynamic>.from(docData['respuestas'] as Map? ?? {});
+    BuildContext context,
+    Map<String, dynamic> docData,
+  ) {
+    final respuestas = Map<String, dynamic>.from(
+      docData['respuestas'] as Map? ?? {},
+    );
     final apellido = (respuestas['apellido_familia'] ?? '').toString().trim();
-    final sede =
-        (docData['sede'] ?? respuestas['sede'] ?? 'Sin sede').toString();
+    final sede = (docData['sede'] ?? respuestas['sede'] ?? 'Sin sede')
+        .toString();
     final comunidad =
         (docData['comunidad'] ?? respuestas['comunidad'] ?? 'Sin comunidad')
             .toString();
@@ -188,7 +193,8 @@ class _AdminJfmScreenState extends State<AdminJfmScreen> {
         ? List<String>.from(respuestas['lista_sacramentos']).join(', ')
         : 'Ninguno';
     final actividades = respuestas['lista_actividades_parroquia'] is Iterable
-        ? List<String>.from(respuestas['lista_actividades_parroquia']).join(', ')
+        ? List<String>.from(respuestas['lista_actividades_parroquia'])
+              .join(', ')
         : 'Ninguna';
     final problematicas = respuestas['lista_problematicas'] is Iterable
         ? List<String>.from(respuestas['lista_problematicas']).join(', ')
@@ -239,8 +245,10 @@ class _AdminJfmScreenState extends State<AdminJfmScreen> {
                   ),
                 ),
                 Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 5,
+                  ),
                   decoration: BoxDecoration(
                     color: estado == 'completado'
                         ? const Color(0xFFE7F4E8)
@@ -261,63 +269,92 @@ class _AdminJfmScreenState extends State<AdminJfmScreen> {
               ],
             ),
             const Divider(height: 28),
-            _seccionFicha('1. Ubicación y Misionero', [
-              _filaFicha('Rama', '${respuestas['rama'] ?? '-'}'),
-              _filaFicha(
-                  'Misionero', '${respuestas['misionero_aplica'] ?? '-'}'),
-              _filaFicha('Sede', sede),
-              _filaFicha('Comunidad', comunidad),
-              _filaFicha(
+            AdminInfoSection('1. Ubicación y Misionero', [
+              AdminInfoRow('Rama', '${respuestas['rama'] ?? '-'}'),
+              AdminInfoRow(
+                'Misionero',
+                '${respuestas['misionero_aplica'] ?? '-'}',
+              ),
+              AdminInfoRow('Sede', sede),
+              AdminInfoRow('Comunidad', comunidad),
+              AdminInfoRow(
                 'Fachada / Referencias',
                 referencias.isEmpty ? 'Sin chips seleccionados' : referencias,
               ),
-              _filaFicha(
+              AdminInfoRow(
                 'Dirección adicional',
                 direccion.isEmpty ? 'No especificada' : direccion,
               ),
             ]),
-            _seccionFicha('2. Datos Demográficos', [
-              _filaFicha('Apellido familia', apellido.isEmpty ? '-' : apellido),
-              _filaFicha(
-                  'Habitantes en casa', '${respuestas['num_habitantes'] ?? 1}'),
-              _filaFicha('Oficio encargado',
-                  '${respuestas['oficio_encargado'] ?? '-'}'),
-              _filaFicha(
-                  'Estado civil', '${respuestas['estado_civil'] ?? '-'}'),
+            AdminInfoSection('2. Datos Demográficos', [
+              AdminInfoRow(
+                'Apellido familia',
+                apellido.isEmpty ? '-' : apellido,
+              ),
+              AdminInfoRow(
+                'Habitantes en casa',
+                '${respuestas['num_habitantes'] ?? 1}',
+              ),
+              AdminInfoRow(
+                'Oficio encargado',
+                '${respuestas['oficio_encargado'] ?? '-'}',
+              ),
+              AdminInfoRow(
+                'Estado civil',
+                '${respuestas['estado_civil'] ?? '-'}',
+              ),
             ]),
-            _seccionFicha('3. Vida Espiritual y Parroquial', [
-              _filaFicha(
-                  '¿Hogar católico?', '${respuestas['hogar_catolico'] ?? '-'}'),
-              _filaFicha('¿Sacramentos faltantes?',
-                  '${respuestas['sacramentos_faltantes'] ?? 'No'}'),
+            AdminInfoSection('3. Vida Espiritual y Parroquial', [
+              AdminInfoRow(
+                '¿Hogar católico?',
+                '${respuestas['hogar_catolico'] ?? '-'}',
+              ),
+              AdminInfoRow(
+                '¿Sacramentos faltantes?',
+                '${respuestas['sacramentos_faltantes'] ?? 'No'}',
+              ),
               if (respuestas['sacramentos_faltantes'] == 'Si') ...[
-                _filaFicha('Sacramentos', sacramentos),
-                _filaFicha('Persona(s) que requiere(n)',
-                    '${respuestas['persona_requiere_sacramento'] ?? '-'}'),
+                AdminInfoRow('Sacramentos', sacramentos),
+                AdminInfoRow(
+                  'Persona(s) que requiere(n)',
+                  '${respuestas['persona_requiere_sacramento'] ?? '-'}',
+                ),
               ],
-              _filaFicha('¿Interés parroquial?',
-                  '${respuestas['interes_parroquia'] ?? 'No'}'),
+              AdminInfoRow(
+                '¿Interés parroquial?',
+                '${respuestas['interes_parroquia'] ?? 'No'}',
+              ),
               if (respuestas['interes_parroquia'] == 'Si') ...[
-                _filaFicha('Actividades', actividades),
-                _filaFicha('Interesado(a)',
-                    '${respuestas['nombre_interesado'] ?? '-'}'),
-                _filaFicha(
-                    'Teléfono', '${respuestas['telefono_interesado'] ?? '-'}'),
+                AdminInfoRow('Actividades', actividades),
+                AdminInfoRow(
+                  'Interesado(a)',
+                  '${respuestas['nombre_interesado'] ?? '-'}',
+                ),
+                AdminInfoRow(
+                  'Teléfono',
+                  '${respuestas['telefono_interesado'] ?? '-'}',
+                ),
               ],
             ]),
-            _seccionFicha('4. Problemáticas Sociales', [
-              _filaFicha('¿Existe problemática?',
-                  '${respuestas['existe_problematica'] ?? 'No'}'),
+            AdminInfoSection('4. Problemáticas Sociales', [
+              AdminInfoRow(
+                '¿Existe problemática?',
+                '${respuestas['existe_problematica'] ?? 'No'}',
+              ),
               if (respuestas['existe_problematica'] == 'Si')
-                _filaFicha('Problemáticas detectadas', problematicas),
+                AdminInfoRow('Problemáticas detectadas', problematicas),
             ]),
-            _seccionFicha('5. Seguimiento y Observaciones', [
-              _filaFicha('¿Requiere seguimiento?',
-                  '${respuestas['existe_seguimiento'] ?? 'No'}'),
+            AdminInfoSection('5. Seguimiento y Observaciones', [
+              AdminInfoRow(
+                '¿Requiere seguimiento?',
+                '${respuestas['existe_seguimiento'] ?? 'No'}',
+              ),
               if (respuestas['existe_seguimiento'] == 'Si')
-                _filaFicha('Acción requerida',
-                    '${respuestas['tipo_seguimiento'] ?? '-'}'),
-              _filaFicha(
+                AdminInfoRow(
+                  'Acción requerida',
+                  '${respuestas['tipo_seguimiento'] ?? '-'}',
+                ),
+              AdminInfoRow(
                 'Comentarios del misionero',
                 (respuestas['comentarios'] ?? '').toString().trim().isEmpty
                     ? 'Sin comentarios adicionales'
@@ -336,7 +373,9 @@ class _AdminJfmScreenState extends State<AdminJfmScreen> {
   }
 
   void _mostrarFichaConeval(
-      BuildContext context, Map<String, dynamic> docData) {
+    BuildContext context,
+    Map<String, dynamic> docData,
+  ) {
     final r = Map<String, dynamic>.from(docData['respuestas'] as Map? ?? {});
     final apellido = (r['apellido_familia'] ?? '').toString().trim();
     final sede = (docData['sede'] ?? r['sede'] ?? 'Sin sede').toString();
@@ -389,8 +428,10 @@ class _AdminJfmScreenState extends State<AdminJfmScreen> {
                   ),
                 ),
                 Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 5,
+                  ),
                   decoration: BoxDecoration(
                     color: estado == 'completado'
                         ? const Color(0xFFE7F4E8)
@@ -411,22 +452,29 @@ class _AdminJfmScreenState extends State<AdminJfmScreen> {
               ],
             ),
             const Divider(height: 28),
-            _seccionFicha('Diagnóstico Socioeconómico CONEVAL', [
-              _filaFicha('Encuestador', '${r['misionero_aplica'] ?? '-'}'),
-              _filaFicha('Sede', sede),
-              _filaFicha('Comunidad', comunidad),
-              _filaFicha('Integrantes del hogar', '${r['num_habitantes'] ?? 1}'),
-              _filaFicha(
+            AdminInfoSection('Diagnóstico Socioeconómico CONEVAL', [
+              AdminInfoRow('Encuestador', '${r['misionero_aplica'] ?? '-'}'),
+              AdminInfoRow('Sede', sede),
+              AdminInfoRow('Comunidad', comunidad),
+              AdminInfoRow(
+                'Integrantes del hogar',
+                '${r['num_habitantes'] ?? 1}',
+              ),
+              AdminInfoRow(
                 'Ingreso mensual estimado',
                 (r['ingreso_mensual'] ?? '').toString().trim().isEmpty
                     ? 'No reportado'
                     : '\$${r['ingreso_mensual']} MXN',
               ),
-              _filaFicha('Carencia alimentaria',
-                  '${r['carencia_alimentaria'] ?? 'No'}'),
-              _filaFicha(
-                  'Servicios básicos', '${r['servicios_basicos'] ?? '-'}'),
-              _filaFicha(
+              AdminInfoRow(
+                'Carencia alimentaria',
+                '${r['carencia_alimentaria'] ?? 'No'}',
+              ),
+              AdminInfoRow(
+                'Servicios básicos',
+                '${r['servicios_basicos'] ?? '-'}',
+              ),
+              AdminInfoRow(
                 'Observaciones',
                 (r['comentarios'] ?? '').toString().trim().isEmpty
                     ? 'Sin observaciones'
@@ -444,177 +492,6 @@ class _AdminJfmScreenState extends State<AdminJfmScreen> {
     );
   }
 
-  Widget _seccionFicha(String titulo, List<Widget> hijos) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 16),
-      child: Container(
-        padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: const Color(0xFFECE1DA)),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              titulo,
-              style: const TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w800,
-                color: Color(0xFFFF5900),
-              ),
-            ),
-            const SizedBox(height: 8),
-            ...hijos,
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _filaFicha(String etiqueta, String valor) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          SizedBox(
-            width: 145,
-            child: Text(
-              etiqueta,
-              style: const TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-                color: Color(0xFF807671),
-              ),
-            ),
-          ),
-          Expanded(
-            child: Text(
-              valor,
-              style: const TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _kpiCard({
-    required String titulo,
-    required String valorPrincipal,
-    required String subtitulo,
-    required IconData icono,
-    required Color color,
-  }) {
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFECE1DA)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(7),
-                decoration: BoxDecoration(
-                  color: color.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Icon(icono, color: color, size: 18),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  titulo,
-                  style: const TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w700,
-                    color: Color(0xFF625B56),
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 10),
-          Text(
-            valorPrincipal,
-            style: TextStyle(
-              fontSize: 22,
-              fontWeight: FontWeight.w800,
-              color: color,
-            ),
-          ),
-          const SizedBox(height: 3),
-          Text(
-            subtitulo,
-            style: const TextStyle(fontSize: 11, color: Color(0xFF807671)),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _barraConteo({
-    required String etiqueta,
-    required int conteo,
-    required int totalFamilias,
-    required Color color,
-  }) {
-    final double proporcion =
-        totalFamilias > 0 ? (conteo / totalFamilias).clamp(0.0, 1.0) : 0.0;
-    final int porcentaje = (proporcion * 100).round();
-
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Expanded(
-                child: Text(
-                  etiqueta,
-                  style: const TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-              Text(
-                '$conteo fam. ($porcentaje%)',
-                style: const TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w800,
-                  color: Color(0xFF625B56),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 5),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(6),
-            child: LinearProgressIndicator(
-              value: proporcion,
-              minHeight: 8,
-              color: color,
-              backgroundColor: const Color(0xFFEDE7E3),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
   // PESTAÑA 1: FAMILIA MISIONERA
   Widget _construirTabJfm({
     required List<Map<String, dynamic>> todasJfm,
@@ -626,11 +503,12 @@ class _AdminJfmScreenState extends State<AdminJfmScreen> {
         : 'Todas';
 
     final filtradas = todasJfm.where((doc) {
-      final respuestas =
-          Map<String, dynamic>.from(doc['respuestas'] as Map? ?? {});
+      final respuestas = Map<String, dynamic>.from(
+        doc['respuestas'] as Map? ?? {},
+      );
       final sedeDoc = (doc['sede'] ?? respuestas['sede'] ?? '').toString();
-      final comDoc =
-          (doc['comunidad'] ?? respuestas['comunidad'] ?? '').toString();
+      final comDoc = (doc['comunidad'] ?? respuestas['comunidad'] ?? '')
+          .toString();
 
       final pasaSede = _sedeFiltro == 'Todas' || sedeDoc == _sedeFiltro;
       final pasaComunidad =
@@ -649,16 +527,13 @@ class _AdminJfmScreenState extends State<AdminJfmScreen> {
     final Map<String, int> conteoProblematicas = {
       for (final p in _problematicasCat) p: 0,
     };
-    final Map<String, int> conteoVisitas = {
-      for (final v in _visitasCat) v: 0,
-    };
+    final Map<String, int> conteoVisitas = {for (final v in _visitasCat) v: 0};
     final List<Map<String, String>> familiasConSeguimiento = [];
 
     for (final doc in filtradas) {
       final r = Map<String, dynamic>.from(doc['respuestas'] as Map? ?? {});
       final habRaw = r['num_habitantes'];
-      final int hab =
-          habRaw is int ? habRaw : (int.tryParse('$habRaw') ?? 1);
+      final int hab = habRaw is int ? habRaw : (int.tryParse('$habRaw') ?? 1);
       totalHabitantes += hab;
 
       if (r['hogar_catolico'] == 'Si') {
@@ -681,8 +556,8 @@ class _AdminJfmScreenState extends State<AdminJfmScreen> {
 
       if (r['existe_seguimiento'] == 'Si') {
         seguimientoUrgente++;
-        final tipoSeg =
-            (r['tipo_seguimiento'] ?? 'Visita misioneros').toString();
+        final tipoSeg = (r['tipo_seguimiento'] ?? 'Visita misioneros')
+            .toString();
         conteoVisitas[tipoSeg] = (conteoVisitas[tipoSeg] ?? 0) + 1;
 
         final apellido = (r['apellido_familia'] ?? '').toString().trim();
@@ -704,8 +579,9 @@ class _AdminJfmScreenState extends State<AdminJfmScreen> {
           'apellido': apellido.isEmpty ? 'Sin apellido' : apellido,
           'accion': tipoSeg,
           'comunidad': (doc['comunidad'] ?? r['comunidad'] ?? '').toString(),
-          'ubicacion':
-              ubicacion.isEmpty ? 'Sin referencia registrada' : ubicacion,
+          'ubicacion': ubicacion.isEmpty
+              ? 'Sin referencia registrada'
+              : ubicacion,
           'contacto': [
             if (interesado.isNotEmpty) interesado,
             if (telefono.isNotEmpty) 'Tel: $telefono',
@@ -731,7 +607,7 @@ class _AdminJfmScreenState extends State<AdminJfmScreen> {
         Row(
           children: [
             Expanded(
-              child: _kpiCard(
+              child: AdminKpiCard(
                 titulo: 'Familias Censadas',
                 valorPrincipal: '$totalFamilias',
                 subtitulo: '$totalHabitantes habitantes totales',
@@ -741,7 +617,7 @@ class _AdminJfmScreenState extends State<AdminJfmScreen> {
             ),
             const SizedBox(width: 12),
             Expanded(
-              child: _kpiCard(
+              child: AdminKpiCard(
                 titulo: 'Hogares Católicos',
                 valorPrincipal: '$porcentajeCatolicos%',
                 subtitulo: '$hogaresCatolicos de $totalFamilias hogares',
@@ -752,7 +628,7 @@ class _AdminJfmScreenState extends State<AdminJfmScreen> {
           ],
         ),
         const SizedBox(height: 12),
-        _kpiCard(
+        AdminKpiCard(
           titulo: 'Acciones de Seguimiento Urgente',
           valorPrincipal: '$seguimientoUrgente familias',
           subtitulo:
@@ -781,7 +657,7 @@ class _AdminJfmScreenState extends State<AdminJfmScreen> {
               ),
               const SizedBox(height: 8),
               ..._sacramentosCat.map(
-                (s) => _barraConteo(
+                (s) => AdminCountBar(
                   etiqueta: s,
                   conteo: conteoSacramentos[s] ?? 0,
                   totalFamilias: totalFamilias,
@@ -812,7 +688,7 @@ class _AdminJfmScreenState extends State<AdminJfmScreen> {
               ),
               const SizedBox(height: 8),
               ..._problematicasCat.map(
-                (p) => _barraConteo(
+                (p) => AdminCountBar(
                   etiqueta: p,
                   conteo: conteoProblematicas[p] ?? 0,
                   totalFamilias: totalFamilias,
@@ -843,7 +719,7 @@ class _AdminJfmScreenState extends State<AdminJfmScreen> {
               ),
               const SizedBox(height: 8),
               ..._visitasCat.map(
-                (v) => _barraConteo(
+                (v) => AdminCountBar(
                   etiqueta: v,
                   conteo: conteoVisitas[v] ?? 0,
                   totalFamilias: totalFamilias,
@@ -854,10 +730,7 @@ class _AdminJfmScreenState extends State<AdminJfmScreen> {
                 const Divider(height: 24),
                 const Text(
                   'Familias que solicitaron seguimiento:',
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w800,
-                  ),
+                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.w800),
                 ),
                 const SizedBox(height: 8),
                 ...familiasConSeguimiento.map(
@@ -954,12 +827,12 @@ class _AdminJfmScreenState extends State<AdminJfmScreen> {
           )
         else
           ...filtradas.map((doc) {
-            final r =
-                Map<String, dynamic>.from(doc['respuestas'] as Map? ?? {});
+            final r = Map<String, dynamic>.from(
+              doc['respuestas'] as Map? ?? {},
+            );
             final apellido = (r['apellido_familia'] ?? '').toString().trim();
-            final com =
-                (doc['comunidad'] ?? r['comunidad'] ?? 'Sin comunidad')
-                    .toString();
+            final com = (doc['comunidad'] ?? r['comunidad'] ?? 'Sin comunidad')
+                .toString();
             final sede = (doc['sede'] ?? r['sede'] ?? 'Sin sede').toString();
             final estado = (doc['estado'] ?? 'borrador').toString();
             final hab = r['num_habitantes'] ?? 1;
@@ -1034,8 +907,10 @@ class _AdminJfmScreenState extends State<AdminJfmScreen> {
                           ),
                         ),
                         const SizedBox(width: 6),
-                        const Icon(Icons.chevron_right,
-                            color: Color(0xFF807671)),
+                        const Icon(
+                          Icons.chevron_right,
+                          color: Color(0xFF807671),
+                        ),
                       ],
                     ),
                   ),
@@ -1076,8 +951,7 @@ class _AdminJfmScreenState extends State<AdminJfmScreen> {
     for (final doc in filtradas) {
       final r = Map<String, dynamic>.from(doc['respuestas'] as Map? ?? {});
       final habRaw = r['num_habitantes'];
-      final int hab =
-          habRaw is int ? habRaw : (int.tryParse('$habRaw') ?? 1);
+      final int hab = habRaw is int ? habRaw : (int.tryParse('$habRaw') ?? 1);
       totalIntegrantes += hab;
 
       if (r['carencia_alimentaria'] == 'Si') {
@@ -1101,7 +975,7 @@ class _AdminJfmScreenState extends State<AdminJfmScreen> {
         Row(
           children: [
             Expanded(
-              child: _kpiCard(
+              child: AdminKpiCard(
                 titulo: 'Hogares CONEVAL',
                 valorPrincipal: '$totalHogares',
                 subtitulo: '$totalIntegrantes integrantes evaluados',
@@ -1111,7 +985,7 @@ class _AdminJfmScreenState extends State<AdminJfmScreen> {
             ),
             const SizedBox(width: 12),
             Expanded(
-              child: _kpiCard(
+              child: AdminKpiCard(
                 titulo: 'Carencia Alimentaria',
                 valorPrincipal: '$conCarenciaAlimentaria',
                 subtitulo: 'de $totalHogares hogares diagnosticados',
@@ -1141,13 +1015,13 @@ class _AdminJfmScreenState extends State<AdminJfmScreen> {
                 ),
               ),
               const SizedBox(height: 10),
-              _barraConteo(
+              AdminCountBar(
                 etiqueta: 'Carencia por acceso a la alimentación',
                 conteo: conCarenciaAlimentaria,
                 totalFamilias: totalHogares,
                 color: red,
               ),
-              _barraConteo(
+              AdminCountBar(
                 etiqueta: 'Vivienda con servicios básicos incompletos',
                 conteo: conServiciosIncompletos,
                 totalFamilias: totalHogares,
@@ -1183,12 +1057,12 @@ class _AdminJfmScreenState extends State<AdminJfmScreen> {
           )
         else
           ...filtradas.map((doc) {
-            final r =
-                Map<String, dynamic>.from(doc['respuestas'] as Map? ?? {});
+            final r = Map<String, dynamic>.from(
+              doc['respuestas'] as Map? ?? {},
+            );
             final apellido = (r['apellido_familia'] ?? '').toString().trim();
-            final com =
-                (doc['comunidad'] ?? r['comunidad'] ?? 'Sin comunidad')
-                    .toString();
+            final com = (doc['comunidad'] ?? r['comunidad'] ?? 'Sin comunidad')
+                .toString();
             final sede = (doc['sede'] ?? r['sede'] ?? 'Sin sede').toString();
             final estado = (doc['estado'] ?? 'borrador').toString();
             final hab = r['num_habitantes'] ?? 1;
@@ -1210,10 +1084,7 @@ class _AdminJfmScreenState extends State<AdminJfmScreen> {
                       children: [
                         const CircleAvatar(
                           backgroundColor: Color(0xFFFDF0F1),
-                          child: Icon(
-                            Icons.analytics_outlined,
-                            color: red,
-                          ),
+                          child: Icon(Icons.analytics_outlined, color: red),
                         ),
                         const SizedBox(width: 12),
                         Expanded(
@@ -1263,8 +1134,10 @@ class _AdminJfmScreenState extends State<AdminJfmScreen> {
                           ),
                         ),
                         const SizedBox(width: 6),
-                        const Icon(Icons.chevron_right,
-                            color: Color(0xFF807671)),
+                        const Icon(
+                          Icons.chevron_right,
+                          color: Color(0xFF807671),
+                        ),
                       ],
                     ),
                   ),
@@ -1319,8 +1192,8 @@ class _AdminJfmScreenState extends State<AdminJfmScreen> {
 
             for (final doc in rawDocs) {
               final data = doc.data() as Map<String, dynamic>? ?? {};
-              final tipo =
-                  (data['tipo_cuestionario'] ?? 'FAMILIA_MISIONERA').toString();
+              final tipo = (data['tipo_cuestionario'] ?? 'FAMILIA_MISIONERA')
+                  .toString();
               if (tipo == 'CONEVAL') {
                 todasConeval.add({...data, 'doc_id': doc.id});
               } else {

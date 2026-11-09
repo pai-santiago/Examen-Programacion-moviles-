@@ -1,34 +1,4 @@
-class JfmQuestion {
-  final String id;
-  final String titulo;
-  final String tipo; // 'dropdown', 'chips_multiples', 'texto', 'numero', 'si_no'
-  final List<String> opciones;
-  final String? dependeDe;
-  final dynamic valorEsperado;
-  final int maxLines;
-  final bool esTelefono;
-
-  const JfmQuestion({
-    required this.id,
-    required this.titulo,
-    required this.tipo,
-    this.opciones = const [],
-    this.dependeDe,
-    this.valorEsperado,
-    this.maxLines = 1,
-    this.esTelefono = false,
-  });
-}
-
-class JfmStepConfig {
-  final String titulo;
-  final List<JfmQuestion> preguntas;
-
-  const JfmStepConfig({
-    required this.titulo,
-    required this.preguntas,
-  });
-}
+import 'jfm_question.dart';
 
 const Map<String, List<String>> sedesComunidadesJfm = {
   'Anáhuac Cancún': [
@@ -79,31 +49,31 @@ const Map<String, List<String>> sedesComunidadesJfm = {
 };
 
 Map<String, dynamic> respuestasInicialesJfm(String misioneroEmail) => {
-      'rama': 'Familia',
-      'sede': 'Anáhuac Cancún',
-      'comunidad': 'Leona Vicario',
-      'comunidad_otra': '',
-      'misionero_aplica': misioneroEmail,
-      'referencias_casa': <String>[],
-      'direccion_casa': '',
-      'apellido_familia': '',
-      'num_habitantes': 1,
-      'oficio_encargado': 'Ama de casa',
-      'estado_civil': 'Casado iglesia',
-      'hogar_catolico': 'Si',
-      'sacramentos_faltantes': 'No',
-      'lista_sacramentos': <String>[],
-      'persona_requiere_sacramento': '',
-      'interes_parroquia': 'No',
-      'lista_actividades_parroquia': <String>[],
-      'nombre_interesado': '',
-      'telefono_interesado': '',
-      'existe_problematica': 'No',
-      'lista_problematicas': <String>[],
-      'existe_seguimiento': 'No',
-      'tipo_seguimiento': 'Visita misioneros',
-      'comentarios': '',
-    };
+  'rama': 'Familia',
+  'sede': 'Anáhuac Cancún',
+  'comunidad': 'Leona Vicario',
+  'comunidad_otra': '',
+  'misionero_aplica': misioneroEmail,
+  'referencias_casa': <String>[],
+  'direccion_casa': '',
+  'apellido_familia': '',
+  'num_habitantes': 1,
+  'oficio_encargado': 'Ama de casa',
+  'estado_civil': 'Casado iglesia',
+  'hogar_catolico': 'Si',
+  'sacramentos_faltantes': 'No',
+  'lista_sacramentos': <String>[],
+  'persona_requiere_sacramento': '',
+  'interes_parroquia': 'No',
+  'lista_actividades_parroquia': <String>[],
+  'nombre_interesado': '',
+  'telefono_interesado': '',
+  'existe_problematica': 'No',
+  'lista_problematicas': <String>[],
+  'existe_seguimiento': 'No',
+  'tipo_seguimiento': 'Visita misioneros',
+  'comentarios': '',
+};
 
 const List<JfmStepConfig> pasosJfm = [
   // PASO 1: ENCUESTADOR Y UBICACIÓN
@@ -135,11 +105,7 @@ const List<JfmStepConfig> pasosJfm = [
           'Anáhuac Querétaro',
         ],
       ),
-      JfmQuestion(
-        id: 'comunidad',
-        titulo: 'Comunidad',
-        tipo: 'dropdown',
-      ),
+      JfmQuestion(id: 'comunidad', titulo: 'Comunidad', tipo: 'dropdown'),
       JfmQuestion(
         id: 'comunidad_otra',
         titulo: 'Especifica el nombre de la comunidad',
