@@ -8,12 +8,16 @@ class ConevalScreen extends StatefulWidget {
   final String? surveyIdExistente;
   final Map<String, dynamic>? respuestasExistentes;
   final String? usuarioEmail;
+  final String? encuestadorUidExistente;
+  final bool encuestaCompletada;
 
   const ConevalScreen({
     super.key,
     this.surveyIdExistente,
     this.respuestasExistentes,
     this.usuarioEmail,
+    this.encuestadorUidExistente,
+    this.encuestaCompletada = false,
   });
 
   @override
@@ -46,11 +50,14 @@ class _ConevalScreenState extends State<ConevalScreen> {
     super.initState();
     _surveyId = widget.surveyIdExistente ??
         'coneval_${DateTime.now().millisecondsSinceEpoch}';
-    _encuestadorEmail = widget.usuarioEmail ??
-        FirebaseAuth.instance.currentUser?.email ??
-        'misionero_demo@anahuac.mx';
-
     final prev = widget.respuestasExistentes ?? {};
+    final emailExistente = prev['misionero_aplica']?.toString().trim();
+    _encuestadorEmail = emailExistente?.isNotEmpty == true
+        ? emailExistente!
+        : widget.usuarioEmail ??
+            FirebaseAuth.instance.currentUser?.email ??
+            'misionero_demo@anahuac.mx';
+
     final sedesDisponibles = sedesComunidadesJfm.keys.toList();
     final sedePrev = prev['sede']?.toString() ?? 'Anáhuac Cancún';
     _sede = sedesDisponibles.contains(sedePrev) ? sedePrev : sedesDisponibles.first;
@@ -124,13 +131,16 @@ class _ConevalScreenState extends State<ConevalScreen> {
         comunidad: _comunidad,
         estado: estado,
         respuestas: respuestas,
+        encuestadorUid: widget.encuestadorUidExistente,
       );
 
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(estado == 'completado'
-              ? '¡Diagnóstico CONEVAL finalizado y enviado!'
+              ? widget.encuestaCompletada
+                  ? 'Cambios guardados correctamente.'
+                  : '¡Diagnóstico CONEVAL finalizado y enviado!'
               : 'Borrador CONEVAL autoguardado'),
           backgroundColor: Colors.green.shade700,
         ),
@@ -157,15 +167,24 @@ class _ConevalScreenState extends State<ConevalScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Diagnóstico CONEVAL'),
+        title: Text(widget.encuestaCompletada
+            ? 'Editar diagnóstico CONEVAL'
+            : 'Diagnóstico CONEVAL'),
         backgroundColor: red,
         foregroundColor: Colors.white,
         actions: [
           IconButton(
             icon: const Icon(Icons.save_outlined),
-            tooltip: 'Guardar borrador',
-            onPressed:
-                _guardando ? null : () => _guardar(estado: 'borrador'),
+            tooltip: widget.encuestaCompletada
+                ? 'Guardar cambios'
+                : 'Guardar borrador',
+            onPressed: _guardando
+                ? null
+                : () => _guardar(
+                      estado: widget.encuestaCompletada
+                          ? 'completado'
+                          : 'borrador',
+                    ),
           ),
         ],
       ),
@@ -319,9 +338,15 @@ class _ConevalScreenState extends State<ConevalScreen> {
                   child: OutlinedButton.icon(
                     onPressed: _guardando
                         ? null
-                        : () => _guardar(estado: 'borrador'),
+                        : () => _guardar(
+                              estado: widget.encuestaCompletada
+                                  ? 'completado'
+                                  : 'borrador',
+                            ),
                     icon: const Icon(Icons.save_outlined),
-                    label: const Text('Guardar Borrador'),
+                    label: Text(widget.encuestaCompletada
+                        ? 'Guardar cambios'
+                        : 'Guardar Borrador'),
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -331,7 +356,9 @@ class _ConevalScreenState extends State<ConevalScreen> {
                         ? null
                         : () => _guardar(estado: 'completado'),
                     icon: const Icon(Icons.check_circle_outline),
-                    label: const Text('Finalizar'),
+                    label: Text(widget.encuestaCompletada
+                        ? 'Guardar y cerrar'
+                        : 'Finalizar'),
                   ),
                 ),
               ],

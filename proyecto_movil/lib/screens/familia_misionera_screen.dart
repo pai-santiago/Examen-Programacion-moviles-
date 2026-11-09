@@ -7,12 +7,16 @@ class FamiliaMisioneraScreen extends StatefulWidget {
   final String? surveyIdExistente;
   final Map<String, dynamic>? respuestasExistentes;
   final String? usuarioEmail;
+  final String? encuestadorUidExistente;
+  final bool encuestaCompletada;
 
   const FamiliaMisioneraScreen({
     super.key,
     this.surveyIdExistente,
     this.respuestasExistentes,
     this.usuarioEmail,
+    this.encuestadorUidExistente,
+    this.encuestaCompletada = false,
   });
 
   @override
@@ -25,6 +29,7 @@ class _FamiliaMisioneraScreenState extends State<FamiliaMisioneraScreen> {
   late final String _misioneroEmail;
   late final Map<String, dynamic> _respuestas;
   final Map<String, TextEditingController> _controllers = {};
+  final Map<String, TextEditingController> _busquedas = {};
   int _pasoActual = 0;
   bool _guardando = false;
   bool _sincronizadoEnNube = true;
@@ -36,14 +41,26 @@ class _FamiliaMisioneraScreenState extends State<FamiliaMisioneraScreen> {
     'lista_problematicas',
   ];
 
+  static const Set<String> _preguntasConBusqueda = {
+    'sede',
+    'comunidad',
+    'oficio_encargado',
+    'estado_civil',
+    'lista_actividades_parroquia',
+  };
+
   @override
   void initState() {
     super.initState();
     _surveyId = widget.surveyIdExistente ??
         'jfm_${DateTime.now().millisecondsSinceEpoch}';
-    _misioneroEmail = widget.usuarioEmail ??
-        FirebaseAuth.instance.currentUser?.email ??
-        'misionero_demo@anahuac.mx';
+    final emailExistente =
+        widget.respuestasExistentes?['misionero_aplica']?.toString().trim();
+    _misioneroEmail = emailExistente?.isNotEmpty == true
+        ? emailExistente!
+        : widget.usuarioEmail ??
+            FirebaseAuth.instance.currentUser?.email ??
+            'misionero_demo@anahuac.mx';
 
     _respuestas = respuestasInicialesJfm(_misioneroEmail);
 
@@ -97,6 +114,10 @@ class _FamiliaMisioneraScreenState extends State<FamiliaMisioneraScreen> {
         }
       }
     }
+
+    for (final id in _preguntasConBusqueda) {
+      _busquedas[id] = TextEditingController();
+    }
   }
 
   @override
@@ -104,10 +125,16 @@ class _FamiliaMisioneraScreenState extends State<FamiliaMisioneraScreen> {
     for (final ctrl in _controllers.values) {
       ctrl.dispose();
     }
+    for (final ctrl in _busquedas.values) {
+      ctrl.dispose();
+    }
     super.dispose();
   }
 
-  Future<void> _guardarEnFirebase({required String estado}) async {
+  Future<void> _guardarEnFirebase({
+    required String estado,
+    bool cerrarAlGuardar = true,
+  }) async {
     setState(() => _guardando = true);
     try {
       for (final entry in _controllers.entries) {
@@ -134,6 +161,7 @@ class _FamiliaMisioneraScreenState extends State<FamiliaMisioneraScreen> {
         comunidad: comunidadFinal,
         estado: estado,
         respuestas: _respuestas,
+        encuestadorUid: widget.encuestadorUidExistente,
       );
 
       if (!mounted) return;
@@ -157,7 +185,9 @@ class _FamiliaMisioneraScreenState extends State<FamiliaMisioneraScreen> {
               Expanded(
                 child: Text(
                   estado == 'completado'
-                      ? '¡Encuesta completada y guardada con éxito!'
+                      ? widget.encuestaCompletada
+                          ? 'Cambios guardados correctamente.'
+                          : '¡Encuesta completada y guardada con éxito!'
                       : 'Borrador autoguardado (Paso ${_pasoActual + 1} de ${pasosJfm.length})',
                 ),
               ),
@@ -167,7 +197,7 @@ class _FamiliaMisioneraScreenState extends State<FamiliaMisioneraScreen> {
         ),
       );
 
-      if (estado == 'completado') {
+      if (estado == 'completado' && cerrarAlGuardar) {
         Navigator.pop(context);
       }
     } catch (e) {
@@ -285,6 +315,169 @@ class _FamiliaMisioneraScreenState extends State<FamiliaMisioneraScreen> {
     contentPadding: EdgeInsets.symmetric(horizontal: 14, vertical: 13),
   );
 
+  Widget _campoBusqueda(String id, {required String sugerencia}) {
+    final controller = _busquedas[id]!;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: TextField(
+        controller: controller,
+        decoration: _decoracionCampo.copyWith(
+          hintText: sugerencia,
+          prefixIcon: const Icon(Icons.search, size: 20),
+          suffixIcon: controller.text.isEmpty
+              ? null
+              : IconButton(
+                  tooltip: 'Limpiar búsqueda',
+                  icon: const Icon(Icons.close, size: 18),
+                  onPressed: () => setState(() => controller.clear()),
+                ),
+        ),
+        onChanged: (_) => setState(() {}),
+      ),
+    );
+  }
+
+  String _normalizarBusqueda(String texto) => texto
+      .toLowerCase()
+      .replaceAll('á', 'a')
+      .replaceAll('é', 'e')
+      .replaceAll('í', 'i')
+      .replaceAll('ó', 'o')
+      .replaceAll('ú', 'u')
+      .replaceAll('ü', 'u');
+
+  List<String> _filtrarOpciones(String id, List<String> opciones) {
+    final busqueda = _normalizarBusqueda(_busquedas[id]?.text.trim() ?? '');
+    if (busqueda.isEmpty) return opciones;
+
+    return opciones
+        .where((opcion) => _normalizarBusqueda(opcion).contains(busqueda))
+        .toList();
+  }
+
+  String _sugerenciaBusqueda(String id) {
+    switch (id) {
+      case 'sede':
+        return 'Buscar sede';
+      case 'comunidad':
+        return 'Buscar comunidad';
+      case 'oficio_encargado':
+        return 'Buscar oficio';
+      case 'estado_civil':
+        return 'Buscar estado civil';
+      default:
+        return 'Buscar opción';
+    }
+  }
+
+  void _seleccionarOpcion(String id, String opcion) {
+    setState(() {
+      _respuestas[id] = opcion;
+      _busquedas[id]?.clear();
+      if (id == 'sede') {
+        final nuevasComunidades =
+            sedesComunidadesJfm[opcion] ?? const ['Otra'];
+        _respuestas['comunidad'] = nuevasComunidades.first;
+        _respuestas['comunidad_otra'] = '';
+        _controllers['comunidad_otra']?.clear();
+        _busquedas['comunidad']?.clear();
+      }
+    });
+  }
+
+  Widget _opcionesBusqueda(String id, List<String> opciones) {
+    final busqueda = _normalizarBusqueda(_busquedas[id]!.text.trim());
+    if (busqueda.isEmpty) return const SizedBox.shrink();
+
+    if (opciones.isEmpty) {
+      return const Padding(
+        padding: EdgeInsets.only(bottom: 10),
+        child: Text(
+          'No se encontraron opciones.',
+          style: TextStyle(fontSize: 12, color: Color(0xFF807671)),
+        ),
+      );
+    }
+
+    return Column(
+      children: opciones.map((opcion) {
+        final seleccionado = _respuestas[id] == opcion;
+        final forma = RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(8),
+          side: BorderSide(
+            color: seleccionado
+                ? const Color(0xFFFF5900)
+                : const Color(0xFFE5E0DD),
+          ),
+        );
+
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 6),
+          child: Material(
+            color: seleccionado ? const Color(0xFFFFF3EC) : Colors.white,
+            shape: forma,
+            child: InkWell(
+              customBorder: forma,
+              onTap: () => _seleccionarOpcion(id, opcion),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 12,
+                ),
+                child: Row(
+                  children: [
+                    Expanded(child: Text(opcion)),
+                    if (seleccionado)
+                      const Icon(
+                        Icons.check_circle,
+                        color: Color(0xFFFF5900),
+                        size: 20,
+                      ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        );
+      }).toList(),
+    );
+  }
+
+  Widget _barraProgreso() {
+    final progreso = (_pasoActual + 1) / pasosJfm.length;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 10, 16, 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text(
+                'Progreso de la encuesta',
+                style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
+              ),
+              Text(
+                'Paso ${_pasoActual + 1} de ${pasosJfm.length}',
+                style: const TextStyle(
+                  fontSize: 12,
+                  color: Color(0xFF625B56),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 7),
+          LinearProgressIndicator(
+            value: progreso,
+            minHeight: 6,
+            backgroundColor: const Color(0xFFFFE1D2),
+            valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFFFF5900)),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _construirPregunta(JfmQuestion p) {
     if (p.dependeDe != null && _respuestas[p.dependeDe] != p.valorEsperado) {
       return const SizedBox.shrink();
@@ -302,6 +495,9 @@ class _FamiliaMisioneraScreenState extends State<FamiliaMisioneraScreen> {
         final String rawVal = (_respuestas[p.id] ?? '').toString();
         final String valorActual =
             opciones.contains(rawVal) ? rawVal : opciones.first;
+        final usaBusqueda = _preguntasConBusqueda.contains(p.id);
+        final opcionesVisibles =
+            usaBusqueda ? _filtrarOpciones(p.id, opciones) : opciones;
         if (_respuestas[p.id] != valorActual) {
           _respuestas[p.id] = valorActual;
         }
@@ -312,6 +508,13 @@ class _FamiliaMisioneraScreenState extends State<FamiliaMisioneraScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               _etiquetaPregunta(p.titulo),
+              if (usaBusqueda)
+                _campoBusqueda(
+                  p.id,
+                  sugerencia: _sugerenciaBusqueda(p.id),
+                ),
+              if (usaBusqueda)
+                _opcionesBusqueda(p.id, opcionesVisibles),
               DropdownButtonFormField<String>(
                 key: ValueKey('${p.id}_${_respuestas['sede']}_$valorActual'),
                 initialValue: valorActual,
@@ -329,17 +532,9 @@ class _FamiliaMisioneraScreenState extends State<FamiliaMisioneraScreen> {
                     )
                     .toList(),
                 onChanged: (nuevoValor) {
-                  if (nuevoValor == null) return;
-                  setState(() {
-                    _respuestas[p.id] = nuevoValor;
-                    if (p.id == 'sede') {
-                      final nuevasComunidades =
-                          sedesComunidadesJfm[nuevoValor] ?? const ['Otra'];
-                      _respuestas['comunidad'] = nuevasComunidades.first;
-                      _respuestas['comunidad_otra'] = '';
-                      _controllers['comunidad_otra']?.clear();
-                    }
-                  });
+                  if (nuevoValor != null) {
+                    _seleccionarOpcion(p.id, nuevoValor);
+                  }
                 },
               ),
             ],
@@ -380,16 +575,32 @@ class _FamiliaMisioneraScreenState extends State<FamiliaMisioneraScreen> {
         final rawList = _respuestas[p.id];
         final List<String> seleccionados =
             rawList is Iterable ? List<String>.from(rawList) : <String>[];
+        final buscaActividades = p.id == 'lista_actividades_parroquia';
+        final busqueda =
+            _normalizarBusqueda(_busquedas[p.id]?.text.trim() ?? '');
+        final opcionesVisibles = buscaActividades && busqueda.isNotEmpty
+            ? p.opciones
+                .where((opcion) => _normalizarBusqueda(opcion).contains(busqueda))
+                .toList()
+            : p.opciones;
         return Padding(
           padding: const EdgeInsets.only(bottom: 16.0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               _etiquetaPregunta(p.titulo),
+              if (buscaActividades)
+                _campoBusqueda(p.id, sugerencia: 'Buscar actividad'),
+              if (opcionesVisibles.isEmpty)
+                const Text(
+                  'No se encontraron actividades.',
+                  style: TextStyle(fontSize: 12, color: Color(0xFF807671)),
+                )
+              else
               Wrap(
                 spacing: 8.0,
                 runSpacing: 4.0,
-                children: p.opciones.map((opcion) {
+                children: opcionesVisibles.map((opcion) {
                   final estaSeleccionado = seleccionados.contains(opcion);
                   return FilterChip(
                     label: Text(opcion),
@@ -442,29 +653,38 @@ class _FamiliaMisioneraScreenState extends State<FamiliaMisioneraScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final esEdicionBorrador = widget.surveyIdExistente != null;
+    final esEdicionExistente = widget.surveyIdExistente != null;
     return Scaffold(
       appBar: AppBar(
         title: Text(
-          esEdicionBorrador
-              ? 'Continuar Borrador JFM'
-              : 'Censo Familia Misionera',
+          widget.encuestaCompletada
+              ? 'Editar encuesta JFM'
+              : esEdicionExistente
+                  ? 'Continuar Borrador JFM'
+                  : 'Censo Familia Misionera',
         ),
         backgroundColor: const Color(0xFFFF5900),
         foregroundColor: Colors.white,
         actions: [
           IconButton(
             icon: const Icon(Icons.save_outlined),
-            tooltip: 'Guardar borrador',
+            tooltip: widget.encuestaCompletada
+                ? 'Guardar cambios'
+                : 'Guardar borrador',
             onPressed: _guardando
                 ? null
-                : () => _guardarEnFirebase(estado: 'borrador'),
+                : () => _guardarEnFirebase(
+                      estado: widget.encuestaCompletada
+                          ? 'completado'
+                          : 'borrador',
+                    ),
           ),
         ],
       ),
       body: Column(
         children: [
           _barraEstadoConexion(),
+          _barraProgreso(),
           Expanded(
             child: Stepper(
               currentStep: _pasoActual,
@@ -472,7 +692,12 @@ class _FamiliaMisioneraScreenState extends State<FamiliaMisioneraScreen> {
               onStepContinue: () {
                 if (_pasoActual < pasosJfm.length - 1) {
                   setState(() => _pasoActual += 1);
-                  _guardarEnFirebase(estado: 'borrador');
+                  _guardarEnFirebase(
+                    estado: widget.encuestaCompletada
+                        ? 'completado'
+                        : 'borrador',
+                    cerrarAlGuardar: false,
+                  );
                 } else {
                   _guardarEnFirebase(estado: 'completado');
                 }
@@ -494,8 +719,11 @@ class _FamiliaMisioneraScreenState extends State<FamiliaMisioneraScreen> {
                           foregroundColor: Colors.white,
                         ),
                         onPressed: _guardando ? null : details.onStepContinue,
-                        child: Text(
-                            esUltimoPaso ? 'FINALIZAR Y ENVIAR' : 'CONTINUAR'),
+                        child: Text(esUltimoPaso
+                            ? widget.encuestaCompletada
+                                ? 'GUARDAR CAMBIOS'
+                                : 'FINALIZAR Y ENVIAR'
+                            : 'CONTINUAR'),
                       ),
                       const SizedBox(width: 12),
                       if (_pasoActual > 0)
