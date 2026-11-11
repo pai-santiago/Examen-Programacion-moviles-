@@ -1,6 +1,7 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import '../main.dart';
+import '../models/user_model.dart';
 import '../services/firestore_service.dart';
 import 'dashboard_screen.dart';
 
@@ -25,21 +26,11 @@ class _LoginPageState extends State<LoginPage> {
     super.dispose();
   }
 
-  void _navegarADashboard({
-    required String rol,
-    required String email,
-    String? uid,
-    String encuestasPermitidas = 'AMBAS',
-  }) {
+  void _navegarADashboard(UserModel usuario) {
     if (!mounted) return;
     Navigator.of(context).pushReplacement(
       MaterialPageRoute<void>(
-        builder: (_) => DashboardPage(
-          rol: rol,
-          usuarioEmail: email,
-          usuarioUid: uid,
-          encuestasPermitidas: encuestasPermitidas,
-        ),
+        builder: (_) => DashboardPage(usuario: usuario),
       ),
     );
   }
@@ -67,25 +58,18 @@ class _LoginPageState extends State<LoginPage> {
   Future<void> _login() async {
     if (!formKey.currentState!.validate()) return;
 
-    final entrada = _usuarioCtrl.text.trim();
+    final correoNormalizado = UserModel.normalizarCorreo(_usuarioCtrl.text);
     final password = _passwordCtrl.text;
-    final correoNormalizado =
-        entrada.contains('@') ? entrada : '$entrada@anahuac.mx';
 
     setState(() => _cargando = true);
     try {
-      final perfil = await _firestoreService.iniciarSesionYObtenerPerfil(
+      final UserModel usuario =
+          await _firestoreService.iniciarSesionYObtenerPerfil(
         email: correoNormalizado,
         password: password,
       );
 
-      _navegarADashboard(
-        rol: (perfil['rol'] ?? 'enumerator').toString(),
-        email: (perfil['email'] ?? correoNormalizado).toString(),
-        uid: perfil['uid']?.toString(),
-        encuestasPermitidas:
-            (perfil['encuestas_permitidas'] ?? 'AMBAS').toString(),
-      );
+      _navegarADashboard(usuario);
     } on FirebaseAuthException catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).clearSnackBars();
@@ -307,9 +291,7 @@ class _LoginPageState extends State<LoginPage> {
                                       ),
                                     ),
                                     onPressed: () => _navegarADashboard(
-                                      rol: 'enumerator',
-                                      email: 'misionero_demo@anahuac.mx',
-                                      uid: 'encuestador_anonimo',
+                                      UserModel.demoEncuestador(),
                                     ),
                                   ),
                                 ),
@@ -333,9 +315,7 @@ class _LoginPageState extends State<LoginPage> {
                                       ),
                                     ),
                                     onPressed: () => _navegarADashboard(
-                                      rol: 'admin',
-                                      email: 'admin@anahuac.mx',
-                                      uid: 'admin_demo',
+                                      UserModel.demoAdmin(),
                                     ),
                                   ),
                                 ),

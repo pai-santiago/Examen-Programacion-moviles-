@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import '../main.dart';
+import '../models/user_model.dart';
 import '../services/firestore_service.dart';
 import 'admin_jfm_screen.dart';
 import 'coneval_screen.dart';
@@ -9,34 +10,23 @@ import 'familia_misionera_screen.dart';
 import 'login_screen.dart';
 
 class DashboardPage extends StatelessWidget {
-  final String rol; // 'enumerator' o 'admin'
-  final String? usuarioEmail;
-  final String? usuarioUid;
-  final String encuestasPermitidas; // 'AMBAS', 'SOLO_JFM', 'SOLO_CONEVAL'
+  final UserModel usuario;
 
   const DashboardPage({
     super.key,
-    this.rol = 'enumerator',
-    this.usuarioEmail,
-    this.usuarioUid,
-    this.encuestasPermitidas = 'AMBAS',
+    required this.usuario,
   });
 
   String get _emailActivo =>
-      usuarioEmail ??
-      FirebaseAuth.instance.currentUser?.email ??
-      (rol == 'admin' ? 'admin@anahuac.mx' : 'misionero_demo@anahuac.mx');
+      usuario.email.isNotEmpty
+          ? usuario.email
+          : (FirebaseAuth.instance.currentUser?.email ??
+              'misionero_demo@anahuac.mx');
 
   String get _uidActivo =>
-      usuarioUid ??
-      FirebaseAuth.instance.currentUser?.uid ??
-      'encuestador_anonimo';
-
-  bool get _permiteJfm =>
-      encuestasPermitidas == 'AMBAS' || encuestasPermitidas == 'SOLO_JFM';
-
-  bool get _permiteConeval =>
-      encuestasPermitidas == 'AMBAS' || encuestasPermitidas == 'SOLO_CONEVAL';
+      usuario.uid.isNotEmpty
+          ? usuario.uid
+          : (FirebaseAuth.instance.currentUser?.uid ?? 'encuestador_anonimo');
 
   void _mostrarSelectorCuestionario(BuildContext context) {
     showModalBottomSheet<void>(
@@ -59,11 +49,11 @@ class DashboardPage extends StatelessWidget {
               ),
               const SizedBox(height: 6),
               Text(
-                'Instrumentos habilitados para tu perfil ($encuestasPermitidas).',
+                'Instrumentos habilitados para tu perfil (${usuario.encuestasPermitidas}).',
                 style: const TextStyle(fontSize: 13, color: Color(0xFF807671)),
               ),
               const SizedBox(height: 18),
-              if (_permiteJfm) ...[
+              if (usuario.permiteJfm) ...[
                 _tarjetaSelector(
                   context: sheetCtx,
                   titulo: 'Censo Juventud y Familia Misionera',
@@ -86,7 +76,7 @@ class DashboardPage extends StatelessWidget {
                 ),
                 const SizedBox(height: 14),
               ],
-              if (_permiteConeval)
+              if (usuario.permiteConeval)
                 _tarjetaSelector(
                   context: sheetCtx,
                   titulo: 'Diagnóstico Comunitario (CONEVAL)',
@@ -373,7 +363,7 @@ class DashboardPage extends StatelessWidget {
 
   bool _perteneceAUsuarioActual(Map<String, dynamic> data) {
     // El administrador puede supervisar todas, pero un encuestador solo ve las suyas
-    if (rol == 'admin') return true;
+    if (usuario.esAdmin) return true;
 
     final encuestadorIdDoc = (data['encuestador_id'] ?? '').toString();
     final respuestas =
@@ -394,7 +384,7 @@ class DashboardPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final firestoreService = FirestoreService();
-    final esAdmin = rol == 'admin';
+    final esAdmin = usuario.esAdmin;
 
     return Scaffold(
       body: SafeArea(
@@ -409,7 +399,7 @@ class DashboardPage extends StatelessWidget {
                     radius: 21,
                     backgroundColor: esAdmin ? const Color(0xFFFF5900) : red,
                     child: Text(
-                      esAdmin ? 'AD' : 'EN',
+                      usuario.inicialesRol,
                       style: const TextStyle(
                         color: Colors.white,
                         fontWeight: FontWeight.bold,
@@ -423,7 +413,7 @@ class DashboardPage extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          esAdmin ? 'Administrador JFM' : 'Encuestador Activo',
+                          usuario.tituloRol,
                           style: const TextStyle(
                             fontSize: 15,
                             fontWeight: FontWeight.w800,
