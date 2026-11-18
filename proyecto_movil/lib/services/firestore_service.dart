@@ -1,12 +1,13 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import '../models/user_model.dart';
 
 class FirestoreService {
   final FirebaseFirestore _db = FirebaseFirestore.instance;
   final FirebaseAuth _auth = FirebaseAuth.instance;
 
-  // Autentica con FirebaseAuth y obtiene/crea el perfil del usuario en la colección 'users'
-  Future<Map<String, dynamic>> iniciarSesionYObtenerPerfil({
+  // Autentica con FirebaseAuth y obtiene/crea el perfil tipado (UserModel) en la colección 'users'
+  Future<UserModel> iniciarSesionYObtenerPerfil({
     required String email,
     required String password,
   }) async {
@@ -25,7 +26,6 @@ class FirestoreService {
 
     final String uid = user.uid;
     final String userEmail = (user.email ?? email).trim();
-    final String emailLower = userEmail.toLowerCase();
 
     final DocumentReference<Map<String, dynamic>> userDocRef =
         _db.collection('users').doc(uid);
@@ -33,36 +33,24 @@ class FirestoreService {
         await userDocRef.get();
 
     if (!docSnap.exists || docSnap.data() == null) {
-      final bool esAdmin = emailLower.startsWith('admin') ||
-          emailLower.startsWith('coordinador');
-      final String rolInicial = esAdmin ? 'admin' : 'enumerator';
-      const String encuestasPermitidasInicial = 'AMBAS';
+      final nuevoUsuario = UserModel.nuevoPerfil(
+        uid: uid,
+        email: userEmail,
+      );
 
-      final nuevoPerfil = {
-        'uid': uid,
-        'email': userEmail,
-        'rol': rolInicial,
-        'encuestas_permitidas': encuestasPermitidasInicial,
+      await userDocRef.set({
+        ...nuevoUsuario.toMap(),
         'fecha_registro': FieldValue.serverTimestamp(),
-      };
+      });
 
-      await userDocRef.set(nuevoPerfil);
-
-      return {
-        'uid': uid,
-        'email': userEmail,
-        'rol': rolInicial,
-        'encuestas_permitidas': encuestasPermitidasInicial,
-      };
+      return nuevoUsuario;
     }
 
-    final data = docSnap.data()!;
-    return {
-      'uid': uid,
-      'email': (data['email'] ?? userEmail).toString(),
-      'rol': (data['rol'] ?? 'enumerator').toString(),
-      'encuestas_permitidas': (data['encuestas_permitidas'] ?? 'AMBAS').toString(),
-    };
+    return UserModel.fromMap(
+      docSnap.data()!,
+      uidFallback: uid,
+      emailFallback: userEmail,
+    );
   }
 
   // Guarda o actualiza cualquier encuesta (Familia Misionera o CONEVAL)
