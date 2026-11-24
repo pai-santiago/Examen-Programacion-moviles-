@@ -28,6 +28,14 @@ class DashboardPage extends StatelessWidget {
           ? usuario.uid
           : (FirebaseAuth.instance.currentUser?.uid ?? 'encuestador_anonimo');
 
+  List<Map<String, dynamic>> _integrantesDe(dynamic value) {
+    if (value is! Iterable) return const [];
+    return value
+        .whereType<Map>()
+        .map((persona) => Map<String, dynamic>.from(persona))
+        .toList();
+  }
+
   void _mostrarSelectorCuestionario(BuildContext context) {
     showModalBottomSheet<void>(
       context: context,
@@ -307,6 +315,9 @@ class DashboardPage extends StatelessWidget {
         ? ConevalScreen(
             surveyIdExistente: docId,
             respuestasExistentes: respuestas,
+            integrantesExistentes: _integrantesDe(
+              data['integrantes'] ?? respuestas['integrantes'],
+            ),
             usuarioEmail: _emailActivo,
             encuestadorUidExistente: encuestadorUid,
             encuestaCompletada: true,
@@ -388,7 +399,10 @@ class DashboardPage extends StatelessWidget {
 
     return Scaffold(
       body: SafeArea(
-        child: Column(
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 1100),
+            child: Column(
           children: [
             // HEADER DE USUARIO Y ROL
             Padding(
@@ -731,6 +745,9 @@ class DashboardPage extends StatelessWidget {
                                           builder: (_) => ConevalScreen(
                                             surveyIdExistente: doc.id,
                                             respuestasExistentes: r,
+                                            integrantesExistentes: _integrantesDe(
+                                              data['integrantes'] ?? r['integrantes'],
+                                            ),
                                             usuarioEmail: _emailActivo,
                                             encuestadorUidExistente:
                                                 data['encuestador_id']
@@ -996,7 +1013,9 @@ class DashboardPage extends StatelessWidget {
                 },
               ),
             ),
-          ],
+              ],
+            ),
+          ),
         ),
       ),
     );

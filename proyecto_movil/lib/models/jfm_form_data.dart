@@ -54,6 +54,7 @@ Map<String, dynamic> respuestasInicialesJfm(String misioneroEmail) => {
   'comunidad': 'Leona Vicario',
   'comunidad_otra': '',
   'misionero_aplica': misioneroEmail,
+  'fecha_censo': '',
   'referencias_casa': <String>[],
   'direccion_casa': '',
   'apellido_familia': '',
@@ -105,6 +106,7 @@ const List<JfmStepConfig> pasosJfm = [
           'Anáhuac Querétaro',
         ],
       ),
+      JfmQuestion(id: 'fecha_censo', titulo: 'Fecha del censo', tipo: 'fecha'),
       JfmQuestion(id: 'comunidad', titulo: 'Comunidad', tipo: 'dropdown'),
       JfmQuestion(
         id: 'comunidad_otra',

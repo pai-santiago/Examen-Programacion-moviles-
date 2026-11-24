@@ -108,6 +108,13 @@ class _FamiliaMisioneraScreenState extends State<FamiliaMisioneraScreen> {
       }
     }
 
+    if ((_respuestas['fecha_censo'] ?? '').toString().isEmpty &&
+        widget.surveyIdExistente == null) {
+      final hoy = DateTime.now();
+      _respuestas['fecha_censo'] =
+          '${hoy.year.toString().padLeft(4, '0')}-${hoy.month.toString().padLeft(2, '0')}-${hoy.day.toString().padLeft(2, '0')}';
+    }
+
     // Inicializar TextEditingControllers para todos los campos de texto
     for (final paso in pasosJfm) {
       for (final p in paso.preguntas) {
@@ -337,6 +344,49 @@ class _FamiliaMisioneraScreenState extends State<FamiliaMisioneraScreen> {
           ),
         );
 
+      case 'fecha':
+        final valorFecha = (_respuestas[p.id] ?? '').toString();
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 16.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              FormQuestionLabel(titulo: p.titulo),
+              TextFormField(
+                key: ValueKey('${p.id}_$valorFecha'),
+                initialValue: valorFecha,
+                readOnly: true,
+                decoration: _decoracionCampo.copyWith(
+                  hintText: 'Selecciona la fecha',
+                  suffixIcon: const Icon(Icons.calendar_today_outlined),
+                ),
+                onTap: () async {
+                  final ahora = DateTime.now();
+                  final fechaActual = DateTime.tryParse(valorFecha) ?? ahora;
+                  final fechaMinima = DateTime(1900);
+                  final fechaInicial = fechaActual.isBefore(fechaMinima)
+                      ? fechaMinima
+                      : fechaActual.isAfter(ahora)
+                      ? ahora
+                      : fechaActual;
+                  final fecha = await showDatePicker(
+                    context: context,
+                    initialDate: fechaInicial,
+                    firstDate: fechaMinima,
+                    lastDate: ahora,
+                    helpText: p.titulo,
+                  );
+                  if (fecha != null && mounted) {
+                    final fechaTexto =
+                        '${fecha.year.toString().padLeft(4, '0')}-${fecha.month.toString().padLeft(2, '0')}-${fecha.day.toString().padLeft(2, '0')}';
+                    setState(() => _respuestas[p.id] = fechaTexto);
+                  }
+                },
+              ),
+            ],
+          ),
+        );
+
       case 'numero':
         final opcionesNum = List.generate(10, (i) => i + 1);
         final rawNum = _respuestas[p.id];
@@ -501,78 +551,85 @@ class _FamiliaMisioneraScreenState extends State<FamiliaMisioneraScreen> {
             totalPasos: pasosJfm.length,
           ),
           Expanded(
-            child: Stepper(
-              currentStep: _pasoActual,
-              onStepTapped: (step) => setState(() => _pasoActual = step),
-              onStepContinue: () {
-                if (_pasoActual < pasosJfm.length - 1) {
-                  setState(() => _pasoActual += 1);
-                  _guardarEnFirebase(
-                    estado: widget.encuestaCompletada
-                        ? 'completado'
-                        : 'borrador',
-                    cerrarAlGuardar: false,
-                  );
-                } else {
-                  _guardarEnFirebase(estado: 'completado');
-                }
-              },
-              onStepCancel: () {
-                if (_pasoActual > 0) {
-                  setState(() => _pasoActual -= 1);
-                }
-              },
-              controlsBuilder: (context, details) {
-                final esUltimoPaso = _pasoActual == pasosJfm.length - 1;
-                return Padding(
-                  padding: const EdgeInsets.only(top: 8.0),
-                  child: Row(
-                    children: [
-                      ElevatedButton(
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFFFF5900),
-                          foregroundColor: Colors.white,
-                        ),
-                        onPressed: _guardando ? null : details.onStepContinue,
-                        child: Text(
-                          esUltimoPaso
-                              ? widget.encuestaCompletada
-                                    ? 'GUARDAR CAMBIOS'
-                                    : 'FINALIZAR Y ENVIAR'
-                              : 'CONTINUAR',
+            child: Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 850),
+                child: Stepper(
+                  currentStep: _pasoActual,
+                  onStepTapped: (step) => setState(() => _pasoActual = step),
+                  onStepContinue: () {
+                    if (_pasoActual < pasosJfm.length - 1) {
+                      setState(() => _pasoActual += 1);
+                      _guardarEnFirebase(
+                        estado: widget.encuestaCompletada
+                            ? 'completado'
+                            : 'borrador',
+                        cerrarAlGuardar: false,
+                      );
+                    } else {
+                      _guardarEnFirebase(estado: 'completado');
+                    }
+                  },
+                  onStepCancel: () {
+                    if (_pasoActual > 0) {
+                      setState(() => _pasoActual -= 1);
+                    }
+                  },
+                  controlsBuilder: (context, details) {
+                    final esUltimoPaso = _pasoActual == pasosJfm.length - 1;
+                    return Padding(
+                      padding: const EdgeInsets.only(top: 8.0),
+                      child: Row(
+                        children: [
+                          ElevatedButton(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFFFF5900),
+                              foregroundColor: Colors.white,
+                            ),
+                            onPressed: _guardando
+                                ? null
+                                : details.onStepContinue,
+                            child: Text(
+                              esUltimoPaso
+                                  ? widget.encuestaCompletada
+                                        ? 'GUARDAR CAMBIOS'
+                                        : 'FINALIZAR Y ENVIAR'
+                                  : 'CONTINUAR',
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          if (_pasoActual > 0)
+                            TextButton(
+                              onPressed: details.onStepCancel,
+                              child: const Text('ANTERIOR'),
+                            ),
+                        ],
+                      ),
+                    );
+                  },
+                  steps: List.generate(pasosJfm.length, (index) {
+                    final paso = pasosJfm[index];
+                    return Step(
+                      title: Text(
+                        paso.titulo,
+                        style: const TextStyle(fontWeight: FontWeight.w700),
+                      ),
+                      isActive: _pasoActual >= index,
+                      content: Padding(
+                        padding: const EdgeInsets.only(top: 12.0, bottom: 8.0),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            if (index == 0)
+                              SurveyorInfoCard(email: _misioneroEmail),
+                            ...paso.preguntas.map(_construirPregunta),
+                          ],
                         ),
                       ),
-                      const SizedBox(width: 12),
-                      if (_pasoActual > 0)
-                        TextButton(
-                          onPressed: details.onStepCancel,
-                          child: const Text('ANTERIOR'),
-                        ),
-                    ],
-                  ),
-                );
-              },
-              steps: List.generate(pasosJfm.length, (index) {
-                final paso = pasosJfm[index];
-                return Step(
-                  title: Text(
-                    paso.titulo,
-                    style: const TextStyle(fontWeight: FontWeight.w700),
-                  ),
-                  isActive: _pasoActual >= index,
-                  content: Padding(
-                    padding: const EdgeInsets.only(top: 12.0, bottom: 8.0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        if (index == 0)
-                          SurveyorInfoCard(email: _misioneroEmail),
-                        ...paso.preguntas.map(_construirPregunta),
-                      ],
-                    ),
-                  ),
-                );
-              }),
+                    );
+                  }),
+                ),
+              ),
             ),
           ),
         ],

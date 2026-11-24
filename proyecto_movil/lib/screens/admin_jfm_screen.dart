@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 
 import '../models/jfm_form_data.dart';
+import '../models/coneval_form_data.dart';
 import '../main.dart';
 import '../services/firestore_service.dart';
 import '../widgets/admin_dashboard_widgets.dart';
@@ -17,6 +18,7 @@ class _AdminJfmScreenState extends State<AdminJfmScreen> {
   final FirestoreService _firestoreService = FirestoreService();
   String _sedeFiltro = 'Todas';
   String _comunidadFiltro = 'Todas';
+  String _busquedaFiltro = '';
 
   static const InputDecoration _decoracionCampo = InputDecoration(
     isDense: true,
@@ -166,6 +168,21 @@ class _AdminJfmScreenState extends State<AdminJfmScreen> {
               }
             },
           ),
+          const SizedBox(height: 12),
+          TextField(
+            decoration: _decoracionCampo.copyWith(
+              labelText: 'Buscar hogar, persona o localidad',
+              prefixIcon: const Icon(Icons.search, size: 19),
+              suffixIcon: _busquedaFiltro.isEmpty
+                  ? null
+                  : IconButton(
+                      tooltip: 'Limpiar búsqueda',
+                      icon: const Icon(Icons.close, size: 18),
+                      onPressed: () => setState(() => _busquedaFiltro = ''),
+                    ),
+            ),
+            onChanged: (value) => setState(() => _busquedaFiltro = value),
+          ),
         ],
       ),
     );
@@ -278,6 +295,10 @@ class _AdminJfmScreenState extends State<AdminJfmScreen> {
               AdminInfoRow('Sede', sede),
               AdminInfoRow('Comunidad', comunidad),
               AdminInfoRow(
+                'Fecha del censo',
+                '${respuestas['fecha_censo'] ?? 'No registrada'}',
+              ),
+              AdminInfoRow(
                 'Fachada / Referencias',
                 referencias.isEmpty ? 'Sin chips seleccionados' : referencias,
               ),
@@ -382,6 +403,30 @@ class _AdminJfmScreenState extends State<AdminJfmScreen> {
     final comunidad =
         (docData['comunidad'] ?? r['comunidad'] ?? 'Sin comunidad').toString();
     final estado = (docData['estado'] ?? 'borrador').toString();
+    final rawIntegrantes = docData['integrantes'] ?? r['integrantes'];
+    final integrantes = rawIntegrantes is Iterable
+        ? rawIntegrantes
+              .whereType<Map>()
+              .map((persona) => Map<String, dynamic>.from(persona))
+              .toList()
+        : <Map<String, dynamic>>[];
+    String mostrar(dynamic value) {
+      if (value == null || value.toString().trim().isEmpty) {
+        return 'No registrado';
+      }
+      if (value is Iterable) return value.join(', ');
+      return value.toString();
+    }
+
+    Widget seccion(String title, Map<String, String> fields) {
+      final rows = fields.entries
+          .where((entry) => r.containsKey(entry.key))
+          .map((entry) => AdminInfoRow(entry.value, mostrar(r[entry.key])))
+          .toList();
+      return rows.isEmpty
+          ? const SizedBox.shrink()
+          : AdminInfoSection(title, rows);
+    }
 
     showModalBottomSheet<void>(
       context: context,
@@ -452,33 +497,194 @@ class _AdminJfmScreenState extends State<AdminJfmScreen> {
               ],
             ),
             const Divider(height: 28),
-            AdminInfoSection('Diagnóstico Socioeconómico CONEVAL', [
-              AdminInfoRow('Encuestador', '${r['misionero_aplica'] ?? '-'}'),
+            AdminInfoSection('Ubicación y situación del predio', [
+              AdminInfoRow('Encuestador', mostrar(r['misionero_aplica'])),
               AdminInfoRow('Sede', sede),
+              AdminInfoRow(
+                'Estado / municipio',
+                '${mostrar(r['estado'] == 'Otro' ? r['estado_otro'] : r['estado'])} / ${mostrar(r['municipio'])}',
+              ),
               AdminInfoRow('Comunidad', comunidad),
               AdminInfoRow(
-                'Integrantes del hogar',
-                '${r['num_habitantes'] ?? 1}',
+                'AGEB / manzana',
+                '${mostrar(r['ageb'])} / ${mostrar(r['manzana'])}',
+              ),
+              AdminInfoRow('Domicilio', mostrar(r['domicilio'])),
+              AdminInfoRow('Religión', mostrar(r['religion_hogar'])),
+              AdminInfoRow(
+                'Comunidad indígena',
+                mostrar(r['comunidad_indigena']),
+              ),
+              AdminInfoRow('Predio habitado', mostrar(r['predio_habitado'])),
+              AdminInfoRow('Uso del predio', mostrar(r['uso_predio_detalle'])),
+              AdminInfoRow(
+                'Papeles de propiedad',
+                mostrar(r['papeles_propiedad']),
               ),
               AdminInfoRow(
-                'Ingreso mensual estimado',
-                (r['ingreso_mensual'] ?? '').toString().trim().isEmpty
-                    ? 'No reportado'
-                    : '\$${r['ingreso_mensual']} MXN',
+                'Situación legal',
+                mostrar(r['situacion_legal_inmueble']),
               ),
               AdminInfoRow(
-                'Carencia alimentaria',
-                '${r['carencia_alimentaria'] ?? 'No'}',
+                'Integrantes registrados',
+                '${integrantes.isNotEmpty ? integrantes.length : r['num_habitantes'] ?? 0}',
+              ),
+            ]),
+            if (integrantes.isNotEmpty)
+              AdminInfoSection('Personas que integran el hogar', [
+                for (var i = 0; i < integrantes.length; i++) ...[
+                  AdminInfoRow(
+                    'Persona ${i + 1}',
+                    [
+                          integrantes[i]['nombre'],
+                          integrantes[i]['apellido_paterno'],
+                          integrantes[i]['apellido_materno'],
+                        ]
+                        .where(
+                          (value) =>
+                              value != null &&
+                              value.toString().trim().isNotEmpty,
+                        )
+                        .join(' '),
+                  ),
+                  AdminInfoRow(
+                    'Parentesco / CURP',
+                    '${mostrar(integrantes[i]['parentesco'])} / ${mostrar(integrantes[i]['curp'])}',
+                  ),
+                  AdminInfoRow(
+                    'Sexo / nacimiento',
+                    '${mostrar(integrantes[i]['sexo'])} / ${mostrar(integrantes[i]['fecha_nacimiento'])}',
+                  ),
+                  AdminInfoRow(
+                    'Estado / civil / lengua',
+                    '${mostrar(integrantes[i]['estado_nacimiento'] == 'Otro' ? integrantes[i]['estado_nacimiento_otro'] : integrantes[i]['estado_nacimiento'])} / ${mostrar(integrantes[i]['estado_civil'])} / ${mostrar(integrantes[i]['lengua_indigena'] ?? integrantes[i]['habla_lengua_indigena'])}',
+                  ),
+                  AdminInfoRow(
+                    'Escolaridad / escuela',
+                    '${mostrar(integrantes[i]['ultimo_grado_estudios'])} / ${mostrar(integrantes[i]['asiste_escuela'])}',
+                  ),
+                  AdminInfoRow(
+                    'Trabajo / actividad',
+                    '${mostrar(integrantes[i]['trabaja'])} / ${mostrar(integrantes[i]['actividad_trabajo'] ?? integrantes[i]['motivo_no_trabaja'])}',
+                  ),
+                  AdminInfoRow(
+                    'Posición / salario',
+                    '${mostrar(integrantes[i]['posicion_trabajo'])} / ${mostrar(integrantes[i]['salario_mensual'])}',
+                  ),
+                  AdminInfoRow(
+                    'Servicio médico',
+                    '${mostrar(integrantes[i]['servicio_medico'])} / ${mostrar(integrantes[i]['tipo_servicio_medico'])} / ${mostrar(integrantes[i]['proveedor_servicio_medico'])}',
+                  ),
+                  AdminInfoRow(
+                    'AFORE / incapacidad',
+                    '${mostrar(integrantes[i]['afore'])} / ${mostrar(integrantes[i]['pago_incapacidad'])}',
+                  ),
+                  AdminInfoRow(
+                    'Discapacidad / padecimiento',
+                    '${mostrar(integrantes[i]['tipos_discapacidad'])} / ${mostrar(integrantes[i]['tipos_padecimiento'])}',
+                  ),
+                  AdminInfoRow(
+                    'Ingresos adicionales',
+                    '${mostrar(integrantes[i]['fuentes_ingreso_adicional'])} / ${mostrar(integrantes[i]['monto_ingresos_adicionales'])}',
+                  ),
+                  AdminInfoRow(
+                    'Programas / monto mensual',
+                    '${mostrar(integrantes[i]['programas_sociales'])} / ${mostrar(integrantes[i]['monto_programas_mensual'])}',
+                  ),
+                ],
+              ]),
+            seccion('Economía y alimentación', {
+              'ingreso_mensual': 'Ingreso mensual estimado (registro previo)',
+              'carencia_alimentaria': 'Resumen de alimentación',
+              'servicios_basicos': 'Resumen de servicios básicos',
+              'comentarios': 'Observaciones (registro previo)',
+              'gasto_alimentacion': 'Gasto mensual en alimentación',
+              'gasto_luz': 'Gasto mensual en luz',
+              'gasto_agua': 'Gasto mensual en agua',
+              'gasto_vivienda': 'Gasto mensual en vivienda',
+              'gasto_educacion': 'Gasto mensual en educación',
+              'gasto_salud': 'Gasto mensual en salud',
+              'gasto_otro': 'Otros gastos mensuales',
+              'comidas_dia': 'Comidas por día',
+              'preocupo_comida_acabara': 'Preocupación por falta de comida',
+              ...{
+                for (var i = 0; i < preguntasAlimentacion.length; i++)
+                  'menores_alimentacion_$i':
+                      'Menores · ${preguntasAlimentacion[i]}',
+                for (var i = 0; i < preguntasAlimentacion.length; i++)
+                  'adultos_alimentacion_$i':
+                      'Adultos · ${preguntasAlimentacion[i]}',
+              },
+            }),
+            seccion('Características de la vivienda', {
+              'clase_vivienda': 'Tipo de vivienda',
+              'clase_vivienda_otra': 'Otro tipo de vivienda',
+              'tenencia_vivienda': 'Tenencia',
+              'material_paredes': 'Material de las paredes',
+              'material_paredes_otro': 'Otro material de paredes',
+              'material_techo': 'Material del techo',
+              'material_techo_otro': 'Otro material de techo',
+              'habitaciones_vivienda': 'Habitaciones',
+              'cantidad_banos': 'Baños',
+              'cantidad_focos': 'Focos',
+              'energia_electrica': 'Energía eléctrica',
+              'agua_fuente': 'Fuente de agua',
+              'drenaje': 'Drenaje',
+              'conexion_drenaje': 'Conexión de drenaje',
+              'letrina': 'Letrina',
+              'equipamiento': 'Equipamiento',
+              'vehiculo': 'Vehículo',
+              'cantidad_vehiculos': 'Cantidad de vehículos',
+              'combustible_cocina': 'Combustible para cocinar',
+              'chimenea': 'Chimenea',
+              'huerto_familiar': 'Huerto familiar',
+              ...{
+                for (var i = 0; i < 6; i++)
+                  'facilidad_$i': 'Facilidad · ${necesidadesVivienda[i]}',
+              },
+            }),
+            seccion('Violencia, acceso y cohesión social', {
+              'violencia_familiar': 'Violencia en el hogar',
+              'personas_afectadas': 'Personas afectadas',
+              'persona_afectada_otra': 'Otra persona afectada',
+              'tipos_violencia': 'Tipos de violencia',
+              'tipo_violencia_otro': 'Otro tipo de violencia',
+              'lugares_violencia': 'Lugar del incidente',
+              'lugar_violencia_otro': 'Otro lugar del incidente',
+              'actores_violencia': 'Presuntas personas responsables',
+              'actor_violencia_otro': 'Otro presunto responsable',
+              'denuncia_violencia': 'Denuncia',
+              'observaciones_entrevistador': 'Observaciones del entrevistador',
+              'distancia_centro_salud': 'Distancia al centro de salud',
+              'distancia_escuela': 'Distancia a la escuela',
+              'niveles_escuela': 'Niveles educativos cercanos',
+              'confianza_comunidad': 'Confianza en la comunidad',
+              'ayuda_comunidad': 'Apoyo entre vecinos',
+              'participacion_comunitaria': 'Participación comunitaria',
+              'respeto_comunidad': 'Respeto a las diferencias',
+              'unidad_comunidad': 'Trabajo conjunto de la comunidad',
+            }),
+            seccion('Ficha técnica de entrevista', {
+              'fecha_entrevista': 'Fecha',
+              'hora_entrevista': 'Hora',
+              'numero_visita': 'Número de visita',
+              'nombre_entrevistado': 'Entrevistado(a)',
+              'nombre_entrevistador': 'Entrevistador(a)',
+            }),
+            AdminInfoSection('Firmas', [
+              AdminInfoRow(
+                'Entrevistado(a)',
+                r['firma_entrevistado'] is List &&
+                        (r['firma_entrevistado'] as List).isNotEmpty
+                    ? 'Registrada'
+                    : 'No registrada',
               ),
               AdminInfoRow(
-                'Servicios básicos',
-                '${r['servicios_basicos'] ?? '-'}',
-              ),
-              AdminInfoRow(
-                'Observaciones',
-                (r['comentarios'] ?? '').toString().trim().isEmpty
-                    ? 'Sin observaciones'
-                    : '${r['comentarios']}',
+                'Entrevistador(a)',
+                r['firma_entrevistador'] is List &&
+                        (r['firma_entrevistador'] as List).isNotEmpty
+                    ? 'Registrada'
+                    : 'No registrada',
               ),
             ]),
             const SizedBox(height: 12),
@@ -513,7 +719,16 @@ class _AdminJfmScreenState extends State<AdminJfmScreen> {
       final pasaSede = _sedeFiltro == 'Todas' || sedeDoc == _sedeFiltro;
       final pasaComunidad =
           valorComunidadActual == 'Todas' || comDoc == valorComunidadActual;
-      return pasaSede && pasaComunidad;
+      final busqueda = _busquedaFiltro.trim().toLowerCase();
+      final texto = [
+        respuestas['apellido_familia'],
+        respuestas['misionero_aplica'],
+        doc['sede'],
+        doc['comunidad'],
+      ].whereType<Object>().join(' ').toLowerCase();
+      return pasaSede &&
+          pasaComunidad &&
+          (busqueda.isEmpty || texto.contains(busqueda));
     }).toList();
 
     final int totalFamilias = filtradas.length;
@@ -940,18 +1155,40 @@ class _AdminJfmScreenState extends State<AdminJfmScreen> {
       final pasaSede = _sedeFiltro == 'Todas' || sedeDoc == _sedeFiltro;
       final pasaComunidad =
           valorComunidadActual == 'Todas' || comDoc == valorComunidadActual;
-      return pasaSede && pasaComunidad;
+      final busqueda = _busquedaFiltro.trim().toLowerCase();
+      final texto = [
+        r['apellido_familia'],
+        r['misionero_aplica'],
+        r['municipio'],
+        r['estado'],
+        sedeDoc,
+        comDoc,
+      ].whereType<Object>().join(' ').toLowerCase();
+      return pasaSede &&
+          pasaComunidad &&
+          (busqueda.isEmpty || texto.contains(busqueda));
     }).toList();
 
     final int totalHogares = filtradas.length;
     int totalIntegrantes = 0;
     int conCarenciaAlimentaria = 0;
     int conServiciosIncompletos = 0;
+    int sinElectricidad = 0;
+    int sinDrenaje = 0;
+    int conPosibleHacinamiento = 0;
+    int hogaresConViolenciaReportada = 0;
+    int personasConDiscapacidad = 0;
 
     for (final doc in filtradas) {
       final r = Map<String, dynamic>.from(doc['respuestas'] as Map? ?? {});
+      final rawIntegrantes = doc['integrantes'] ?? r['integrantes'];
+      final integrantes = rawIntegrantes is Iterable
+          ? rawIntegrantes.whereType<Map>().toList()
+          : const <Map>[];
       final habRaw = r['num_habitantes'];
-      final int hab = habRaw is int ? habRaw : (int.tryParse('$habRaw') ?? 1);
+      final int hab = integrantes.isNotEmpty
+          ? integrantes.length
+          : (habRaw is int ? habRaw : (int.tryParse('$habRaw') ?? 0));
       totalIntegrantes += hab;
 
       if (r['carencia_alimentaria'] == 'Si') {
@@ -960,6 +1197,14 @@ class _AdminJfmScreenState extends State<AdminJfmScreen> {
       if (r['servicios_basicos'] == 'Incompletos') {
         conServiciosIncompletos++;
       }
+      if (r['energia_electrica'] == 'No') sinElectricidad++;
+      if (r['drenaje'] == 'No') sinDrenaje++;
+      final habitaciones = int.tryParse('${r['habitaciones_vivienda']}') ?? 0;
+      if (habitaciones > 0 && hab > habitaciones) conPosibleHacinamiento++;
+      if (r['violencia_familiar'] == 'Sí') hogaresConViolenciaReportada++;
+      personasConDiscapacidad += integrantes
+          .where((persona) => persona['discapacidad'] == 'Sí')
+          .length;
     }
 
     return ListView(
@@ -986,11 +1231,35 @@ class _AdminJfmScreenState extends State<AdminJfmScreen> {
             const SizedBox(width: 12),
             Expanded(
               child: AdminKpiCard(
-                titulo: 'Carencia Alimentaria',
+                titulo: 'Alerta de alimentación',
                 valorPrincipal: '$conCarenciaAlimentaria',
                 subtitulo: 'de $totalHogares hogares diagnosticados',
                 icono: Icons.restaurant_outlined,
                 color: const Color(0xFFFF5900),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 16),
+        Row(
+          children: [
+            Expanded(
+              child: AdminKpiCard(
+                titulo: 'Personas con discapacidad',
+                valorPrincipal: '$personasConDiscapacidad',
+                subtitulo: 'registros de integrantes',
+                icono: Icons.accessible_outlined,
+                color: const Color(0xFF426C8B),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: AdminKpiCard(
+                titulo: 'Hogares con violencia reportada',
+                valorPrincipal: '$hogaresConViolenciaReportada',
+                subtitulo: 'de $totalHogares hogares',
+                icono: Icons.health_and_safety_outlined,
+                color: const Color(0xFF9A3E35),
               ),
             ),
           ],
@@ -1007,7 +1276,7 @@ class _AdminJfmScreenState extends State<AdminJfmScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const Text(
-                'INDICADORES PRELIMINARES DE CARENCIAS (CONEVAL)',
+                'RESUMEN DE CONDICIONES REPORTADAS',
                 style: TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.w800,
@@ -1016,7 +1285,7 @@ class _AdminJfmScreenState extends State<AdminJfmScreen> {
               ),
               const SizedBox(height: 10),
               AdminCountBar(
-                etiqueta: 'Carencia por acceso a la alimentación',
+                etiqueta: 'Hogares que reportan dificultades de alimentación',
                 conteo: conCarenciaAlimentaria,
                 totalFamilias: totalHogares,
                 color: red,
@@ -1026,6 +1295,24 @@ class _AdminJfmScreenState extends State<AdminJfmScreen> {
                 conteo: conServiciosIncompletos,
                 totalFamilias: totalHogares,
                 color: const Color(0xFFFF5900),
+              ),
+              AdminCountBar(
+                etiqueta: 'Hogares sin energía eléctrica',
+                conteo: sinElectricidad,
+                totalFamilias: totalHogares,
+                color: const Color(0xFF426C8B),
+              ),
+              AdminCountBar(
+                etiqueta: 'Hogares sin drenaje',
+                conteo: sinDrenaje,
+                totalFamilias: totalHogares,
+                color: const Color(0xFF8B6E3F),
+              ),
+              AdminCountBar(
+                etiqueta: 'Hogares con posible hacinamiento',
+                conteo: conPosibleHacinamiento,
+                totalFamilias: totalHogares,
+                color: const Color(0xFF8A4D7B),
               ),
             ],
           ),

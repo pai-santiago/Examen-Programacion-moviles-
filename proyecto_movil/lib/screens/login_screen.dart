@@ -1,5 +1,6 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+
 import '../main.dart';
 import '../models/user_model.dart';
 import '../services/firestore_service.dart';
@@ -29,9 +30,7 @@ class _LoginPageState extends State<LoginPage> {
   void _navegarADashboard(UserModel usuario) {
     if (!mounted) return;
     Navigator.of(context).pushReplacement(
-      MaterialPageRoute<void>(
-        builder: (_) => DashboardPage(usuario: usuario),
-      ),
+      MaterialPageRoute<void>(builder: (_) => DashboardPage(usuario: usuario)),
     );
   }
 
@@ -63,11 +62,11 @@ class _LoginPageState extends State<LoginPage> {
 
     setState(() => _cargando = true);
     try {
-      final UserModel usuario =
-          await _firestoreService.iniciarSesionYObtenerPerfil(
-        email: correoNormalizado,
-        password: password,
-      );
+      final UserModel usuario = await _firestoreService
+          .iniciarSesionYObtenerPerfil(
+            email: correoNormalizado,
+            password: password,
+          );
 
       _navegarADashboard(usuario);
     } on FirebaseAuthException catch (e) {
@@ -103,7 +102,10 @@ class _LoginPageState extends State<LoginPage> {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-        body: SafeArea(
+    body: SafeArea(
+      child: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 480),
           child: LayoutBuilder(
             builder: (context, constraints) => SingleChildScrollView(
               child: ConstrainedBox(
@@ -185,12 +187,13 @@ class _LoginPageState extends State<LoginPage> {
                                       Icons.person_outline,
                                       size: 22,
                                     ),
-                                    hintText: 'ej. misionero1 o admin@anahuac.mx',
+                                    hintText:
+                                        'ej. misionero1 o admin@anahuac.mx',
                                   ),
                                   validator: (value) =>
                                       value == null || value.trim().length < 3
-                                          ? 'Ingresa tu usuario o correo institucional'
-                                          : null,
+                                      ? 'Ingresa tu usuario o correo institucional'
+                                      : null,
                                 ),
                                 const SizedBox(height: 14),
                                 const Text(
@@ -228,8 +231,8 @@ class _LoginPageState extends State<LoginPage> {
                                   ),
                                   validator: (value) =>
                                       value == null || value.length < 6
-                                          ? 'Ingresa tu contraseña (mínimo 6 caracteres)'
-                                          : null,
+                                      ? 'Ingresa tu contraseña (mínimo 6 caracteres)'
+                                      : null,
                                 ),
                                 const SizedBox(height: 20),
                                 SizedBox(
@@ -246,8 +249,10 @@ class _LoginPageState extends State<LoginPage> {
                                               color: Colors.white,
                                             ),
                                           )
-                                        : const Icon(Icons.arrow_forward,
-                                            size: 20),
+                                        : const Icon(
+                                            Icons.arrow_forward,
+                                            size: 20,
+                                          ),
                                     label: const Text(
                                       'Iniciar Sesión',
                                       style: TextStyle(
@@ -341,5 +346,7 @@ class _LoginPageState extends State<LoginPage> {
             ),
           ),
         ),
-      );
+      ),
+    ),
+  );
 }
