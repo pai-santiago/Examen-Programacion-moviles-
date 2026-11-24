@@ -38,20 +38,14 @@ class UserModel {
     return limpio.contains('@') ? limpio : '$limpio@anahuac.mx';
   }
 
-  /// Crea un perfil inicial por defecto cuando el usuario inicia sesión por primera vez.
-  factory UserModel.nuevoPerfil({
-    required String uid,
-    required String email,
-  }) {
+  /// Crea un perfil inicial de encuestador cuando la cuenta aún no tiene perfil.
+  /// Los permisos de administrador se asignan explícitamente en Firestore.
+  factory UserModel.nuevoPerfil({required String uid, required String email}) {
     final emailLimpio = email.trim();
-    final emailLower = emailLimpio.toLowerCase();
-    final esCuentaAdmin =
-        emailLower.startsWith('admin') || emailLower.startsWith('coordinador');
-
     return UserModel(
       uid: uid,
       email: emailLimpio,
-      rol: esCuentaAdmin ? 'admin' : 'enumerator',
+      rol: 'enumerator',
       encuestasPermitidas: 'AMBAS',
     );
   }
@@ -63,8 +57,8 @@ class UserModel {
     String? emailFallback,
   }) {
     return UserModel(
-      uid: (map['uid'] ?? uidFallback ?? 'encuestador_anonimo').toString(),
-      email: (map['email'] ?? emailFallback ?? 'misionero_demo@anahuac.mx')
+      uid: (map['uid'] ?? uidFallback ?? '').toString(),
+      email: (map['email'] ?? emailFallback ?? 'Sin correo registrado')
           .toString()
           .trim(),
       rol: (map['rol'] ?? 'enumerator').toString(),
@@ -81,20 +75,4 @@ class UserModel {
       'encuestas_permitidas': encuestasPermitidas,
     };
   }
-
-  /// Instancia preconfigurada para modo de prueba sin conexión (Encuestador).
-  factory UserModel.demoEncuestador() => const UserModel(
-        uid: 'encuestador_anonimo',
-        email: 'misionero_demo@anahuac.mx',
-        rol: 'enumerator',
-        encuestasPermitidas: 'AMBAS',
-      );
-
-  /// Instancia preconfigurada para modo de prueba sin conexión (Administrador).
-  factory UserModel.demoAdmin() => const UserModel(
-        uid: 'admin_demo',
-        email: 'admin@anahuac.mx',
-        rol: 'admin',
-        encuestasPermitidas: 'AMBAS',
-      );
 }

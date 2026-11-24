@@ -21,12 +21,12 @@ class DashboardPage extends StatelessWidget {
       usuario.email.isNotEmpty
           ? usuario.email
           : (FirebaseAuth.instance.currentUser?.email ??
-              'misionero_demo@anahuac.mx');
+              'Sin correo asociado');
 
   String get _uidActivo =>
       usuario.uid.isNotEmpty
           ? usuario.uid
-          : (FirebaseAuth.instance.currentUser?.uid ?? 'encuestador_anonimo');
+          : (FirebaseAuth.instance.currentUser?.uid ?? '');
 
   List<Map<String, dynamic>> _integrantesDe(dynamic value) {
     if (value is! Iterable) return const [];
@@ -104,6 +104,20 @@ class DashboardPage extends StatelessWidget {
                       ),
                     );
                   },
+                ),
+              if (!usuario.permiteJfm && !usuario.permiteConeval)
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFFF5E3),
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: const Color(0xFFFFCC80)),
+                  ),
+                  child: const Text(
+                    'Tu perfil todavía no tiene un cuestionario asignado. Solicita acceso al administrador.',
+                    style: TextStyle(height: 1.4),
+                  ),
                 ),
             ],
           ),
@@ -445,31 +459,6 @@ class DashboardPage extends StatelessWidget {
                       ],
                     ),
                   ),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 10,
-                      vertical: 6,
-                    ),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFF1F8EC),
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(color: const Color(0xFF24852C)),
-                    ),
-                    child: const Row(
-                      children: [
-                        Icon(Icons.circle, size: 7, color: Color(0xFF168321)),
-                        SizedBox(width: 5),
-                        Text(
-                          'En línea',
-                          style: TextStyle(
-                            fontSize: 10,
-                            fontWeight: FontWeight.w600,
-                            color: Color(0xFF168321),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
                   IconButton(
                     tooltip: 'Cerrar sesión',
                     icon: const Icon(Icons.logout, size: 20),
@@ -548,6 +537,66 @@ class DashboardPage extends StatelessWidget {
               child: StreamBuilder<QuerySnapshot>(
                 stream: firestoreService.obtenerEncuestas(),
                 builder: (context, snapshot) {
+                  if (snapshot.hasError) {
+                    return Center(
+                      child: Padding(
+                        padding: const EdgeInsets.all(28),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(
+                              Icons.cloud_off_outlined,
+                              size: 40,
+                              color: Color(0xFF9A3E35),
+                            ),
+                            const SizedBox(height: 12),
+                            const Text(
+                              'No pudimos cargar tus encuestas',
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                            const SizedBox(height: 6),
+                            const Text(
+                              'Revisa tu conexión o los permisos de tu cuenta y vuelve a intentarlo.',
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                color: Color(0xFF625B56),
+                                height: 1.4,
+                              ),
+                            ),
+                            const SizedBox(height: 14),
+                            OutlinedButton.icon(
+                              onPressed: () => Navigator.of(context)
+                                  .pushReplacement(
+                                MaterialPageRoute<void>(
+                                  builder: (_) => DashboardPage(usuario: usuario),
+                                ),
+                              ),
+                              icon: const Icon(Icons.refresh),
+                              label: const Text('Volver a cargar'),
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  }
+                  if (snapshot.connectionState == ConnectionState.waiting &&
+                      !snapshot.hasData) {
+                    return const Center(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          CircularProgressIndicator(),
+                          SizedBox(height: 12),
+                          Text('Cargando tus encuestas…'),
+                        ],
+                      ),
+                    );
+                  }
+
                   final docs = snapshot.data?.docs ?? [];
                   final borradores = <QueryDocumentSnapshot>[];
                   final completadas = <QueryDocumentSnapshot>[];

@@ -48,9 +48,9 @@ class _LoginPageState extends State<LoginPage> {
       case 'too-many-requests':
         return 'Demasiados intentos fallidos. Espera unos minutos antes de volver a intentar.';
       case 'network-request-failed':
-        return 'Sin conexión a internet. Verifica tu red o usa los botones Demo abajo.';
+        return 'Sin conexión a internet. Revisa tu red e intenta de nuevo.';
       default:
-        return 'No se pudo iniciar sesión ($code). Verifica tus credenciales.';
+        return 'No se pudo iniciar sesión. Verifica tus datos e intenta de nuevo.';
     }
   }
 
@@ -85,14 +85,26 @@ class _LoginPageState extends State<LoginPage> {
           ),
         ),
       );
-    } catch (e) {
+    } on FirebaseException {
       if (!mounted) return;
       ScaffoldMessenger.of(context).clearSnackBars();
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           backgroundColor: red,
           behavior: SnackBarBehavior.floating,
-          content: Text('Error al conectar con Firestore: $e'),
+          content: const Text(
+            'No pudimos cargar tu perfil. Revisa tu conexión o los permisos de tu cuenta.',
+          ),
+        ),
+      );
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).clearSnackBars();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Ocurrió un problema. Intenta iniciar sesión de nuevo.',
+          ),
         ),
       );
     } finally {
@@ -216,6 +228,9 @@ class _LoginPageState extends State<LoginPage> {
                                     ),
                                     hintText: '••••••••',
                                     suffixIcon: IconButton(
+                                      tooltip: _ocultarPassword
+                                          ? 'Mostrar contraseña'
+                                          : 'Ocultar contraseña',
                                       icon: Icon(
                                         _ocultarPassword
                                             ? Icons.visibility_off_outlined
@@ -269,59 +284,14 @@ class _LoginPageState extends State<LoginPage> {
                                     ),
                                   ),
                                 ),
-                                const SizedBox(height: 20),
-                                const Divider(),
-                                const SizedBox(height: 10),
+                                const SizedBox(height: 18),
                                 const Text(
-                                  'ACCESO RÁPIDO PARA PRUEBAS SIN INTERNET (DEMO)',
+                                  '¿No tienes acceso? Solicita tu cuenta al administrador de la plataforma.',
+                                  textAlign: TextAlign.center,
                                   style: TextStyle(
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.w800,
+                                    fontSize: 12,
+                                    height: 1.4,
                                     color: Color(0xFF625B56),
-                                  ),
-                                ),
-                                const SizedBox(height: 10),
-                                SizedBox(
-                                  width: double.infinity,
-                                  child: OutlinedButton.icon(
-                                    icon: const Icon(
-                                      Icons.assignment_ind_outlined,
-                                      size: 18,
-                                    ),
-                                    label: const Text(
-                                      'Entrar como Encuestador (Demo)',
-                                      style: TextStyle(
-                                        fontWeight: FontWeight.w700,
-                                        fontSize: 13,
-                                      ),
-                                    ),
-                                    onPressed: () => _navegarADashboard(
-                                      UserModel.demoEncuestador(),
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(height: 8),
-                                SizedBox(
-                                  width: double.infinity,
-                                  child: FilledButton.tonalIcon(
-                                    style: FilledButton.styleFrom(
-                                      backgroundColor: const Color(0xFFFFF0E6),
-                                      foregroundColor: const Color(0xFFFF5900),
-                                    ),
-                                    icon: const Icon(
-                                      Icons.admin_panel_settings_outlined,
-                                      size: 18,
-                                    ),
-                                    label: const Text(
-                                      'Entrar como Administrador (Demo)',
-                                      style: TextStyle(
-                                        fontWeight: FontWeight.w800,
-                                        fontSize: 13,
-                                      ),
-                                    ),
-                                    onPressed: () => _navegarADashboard(
-                                      UserModel.demoAdmin(),
-                                    ),
                                   ),
                                 ),
                               ],
@@ -331,7 +301,7 @@ class _LoginPageState extends State<LoginPage> {
                         const Spacer(flex: 2),
                         const SizedBox(height: 24),
                         const Text(
-                          'v2.6.0 · Red Anáhuac (Auth + Roles Firestore)',
+                          'Red Anáhuac · Acceso institucional',
                           style: TextStyle(
                             fontSize: 10,
                             color: Color(0xFFAAA29D),

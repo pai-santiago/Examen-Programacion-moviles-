@@ -6,6 +6,7 @@ import '../models/coneval_form_data.dart';
 import '../main.dart';
 import '../services/firestore_service.dart';
 import '../widgets/admin_dashboard_widgets.dart';
+import '../widgets/form_question_widgets.dart';
 
 class AdminJfmScreen extends StatefulWidget {
   const AdminJfmScreen({super.key});
@@ -19,6 +20,13 @@ class _AdminJfmScreenState extends State<AdminJfmScreen> {
   String _sedeFiltro = 'Todas';
   String _comunidadFiltro = 'Todas';
   String _busquedaFiltro = '';
+  final TextEditingController _busquedaCtrl = TextEditingController();
+
+  @override
+  void dispose() {
+    _busquedaCtrl.dispose();
+    super.dispose();
+  }
 
   static const InputDecoration _decoracionCampo = InputDecoration(
     isDense: true,
@@ -100,91 +108,141 @@ class _AdminJfmScreenState extends State<AdminJfmScreen> {
     required String valorComunidadActual,
     required Color colorTema,
   }) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFECE1DA)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(Icons.filter_list, size: 18, color: colorTema),
-              const SizedBox(width: 6),
-              const Text(
-                'FILTROS DE REPORTE COMUNITARIO',
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w800,
-                  color: Color(0xFF625B56),
+    final filtrosActivos = _sedeFiltro != 'Todas' ||
+        _comunidadFiltro != 'Todas' ||
+        _busquedaFiltro.isNotEmpty;
+    final campoSedeYComunidad = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _etiquetaCampo('Sede'),
+        DropdownButtonFormField<String>(
+          key: ValueKey('admin_sede_$_sedeFiltro'),
+          initialValue: _sedeFiltro,
+          isExpanded: true,
+          decoration: _decoracionCampo,
+          items: sedesOpciones
+              .map(
+                (sede) => DropdownMenuItem(
+                  value: sede,
+                  child: Text(sede, overflow: TextOverflow.ellipsis),
                 ),
+              )
+              .toList(),
+          onChanged: (value) {
+            if (value == null) return;
+            setState(() {
+              _sedeFiltro = value;
+              _comunidadFiltro = 'Todas';
+            });
+          },
+        ),
+        const SizedBox(height: 12),
+        _etiquetaCampo('Comunidad'),
+        DropdownButtonFormField<String>(
+          key: ValueKey('admin_com_${_sedeFiltro}_$valorComunidadActual'),
+          initialValue: valorComunidadActual,
+          isExpanded: true,
+          decoration: _decoracionCampo,
+          items: comunidadesOpciones
+              .map(
+                (comunidad) => DropdownMenuItem(
+                  value: comunidad,
+                  child: Text(comunidad, overflow: TextOverflow.ellipsis),
+                ),
+              )
+              .toList(),
+          onChanged: (value) {
+            if (value != null) setState(() => _comunidadFiltro = value);
+          },
+        ),
+      ],
+    );
+    final campoBusqueda = TextField(
+      controller: _busquedaCtrl,
+      decoration: _decoracionCampo.copyWith(
+        labelText: 'Buscar hogar, persona o localidad',
+        prefixIcon: const Icon(Icons.search, size: 19),
+        suffixIcon: _busquedaFiltro.isEmpty
+            ? null
+            : IconButton(
+                tooltip: 'Limpiar búsqueda',
+                icon: const Icon(Icons.close, size: 18),
+                onPressed: () {
+                  _busquedaCtrl.clear();
+                  setState(() => _busquedaFiltro = '');
+                },
               ),
+      ),
+      onChanged: (value) => setState(() => _busquedaFiltro = value),
+    );
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final esAmplio = constraints.maxWidth >= 840;
+        return Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: const Color(0xFFECE1DA)),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Icon(Icons.filter_list, size: 18, color: colorTema),
+                  const SizedBox(width: 6),
+                  const Text(
+                    'FILTROS DE REPORTE COMUNITARIO',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w800,
+                      color: Color(0xFF625B56),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              if (esAmplio)
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(child: campoSedeYComunidad),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Padding(
+                        padding: const EdgeInsets.only(top: 26),
+                        child: campoBusqueda,
+                      ),
+                    ),
+                  ],
+                )
+              else ...[
+                campoSedeYComunidad,
+                const SizedBox(height: 12),
+                campoBusqueda,
+              ],
+              if (filtrosActivos)
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: TextButton.icon(
+                    onPressed: () {
+                      _busquedaCtrl.clear();
+                      setState(() {
+                        _sedeFiltro = 'Todas';
+                        _comunidadFiltro = 'Todas';
+                        _busquedaFiltro = '';
+                      });
+                    },
+                    icon: const Icon(Icons.filter_alt_off_outlined, size: 18),
+                    label: const Text('Limpiar filtros'),
+                  ),
+                ),
             ],
           ),
-          const SizedBox(height: 12),
-          _etiquetaCampo('Sede'),
-          DropdownButtonFormField<String>(
-            key: ValueKey('admin_sede_$_sedeFiltro'),
-            initialValue: _sedeFiltro,
-            isExpanded: true,
-            decoration: _decoracionCampo,
-            items: sedesOpciones
-                .map(
-                  (s) => DropdownMenuItem(
-                    value: s,
-                    child: Text(s, overflow: TextOverflow.ellipsis),
-                  ),
-                )
-                .toList(),
-            onChanged: (v) {
-              if (v == null) return;
-              setState(() {
-                _sedeFiltro = v;
-                _comunidadFiltro = 'Todas';
-              });
-            },
-          ),
-          const SizedBox(height: 12),
-          _etiquetaCampo('Comunidad'),
-          DropdownButtonFormField<String>(
-            key: ValueKey('admin_com_${_sedeFiltro}_$valorComunidadActual'),
-            initialValue: valorComunidadActual,
-            isExpanded: true,
-            decoration: _decoracionCampo,
-            items: comunidadesOpciones
-                .map(
-                  (c) => DropdownMenuItem(
-                    value: c,
-                    child: Text(c, overflow: TextOverflow.ellipsis),
-                  ),
-                )
-                .toList(),
-            onChanged: (v) {
-              if (v != null) {
-                setState(() => _comunidadFiltro = v);
-              }
-            },
-          ),
-          const SizedBox(height: 12),
-          TextField(
-            decoration: _decoracionCampo.copyWith(
-              labelText: 'Buscar hogar, persona o localidad',
-              prefixIcon: const Icon(Icons.search, size: 19),
-              suffixIcon: _busquedaFiltro.isEmpty
-                  ? null
-                  : IconButton(
-                      tooltip: 'Limpiar búsqueda',
-                      icon: const Icon(Icons.close, size: 18),
-                      onPressed: () => setState(() => _busquedaFiltro = ''),
-                    ),
-            ),
-            onChanged: (value) => setState(() => _busquedaFiltro = value),
-          ),
-        ],
-      ),
+        );
+      },
     );
   }
 
@@ -719,13 +777,13 @@ class _AdminJfmScreenState extends State<AdminJfmScreen> {
       final pasaSede = _sedeFiltro == 'Todas' || sedeDoc == _sedeFiltro;
       final pasaComunidad =
           valorComunidadActual == 'Todas' || comDoc == valorComunidadActual;
-      final busqueda = _busquedaFiltro.trim().toLowerCase();
-      final texto = [
+      final busqueda = normalizarTextoBusqueda(_busquedaFiltro.trim());
+      final texto = normalizarTextoBusqueda([
         respuestas['apellido_familia'],
         respuestas['misionero_aplica'],
         doc['sede'],
         doc['comunidad'],
-      ].whereType<Object>().join(' ').toLowerCase();
+      ].whereType<Object>().join(' '));
       return pasaSede &&
           pasaComunidad &&
           (busqueda.isEmpty || texto.contains(busqueda));
@@ -1155,15 +1213,15 @@ class _AdminJfmScreenState extends State<AdminJfmScreen> {
       final pasaSede = _sedeFiltro == 'Todas' || sedeDoc == _sedeFiltro;
       final pasaComunidad =
           valorComunidadActual == 'Todas' || comDoc == valorComunidadActual;
-      final busqueda = _busquedaFiltro.trim().toLowerCase();
-      final texto = [
+      final busqueda = normalizarTextoBusqueda(_busquedaFiltro.trim());
+      final texto = normalizarTextoBusqueda([
         r['apellido_familia'],
         r['misionero_aplica'],
         r['municipio'],
         r['estado'],
         sedeDoc,
         comDoc,
-      ].whereType<Object>().join(' ').toLowerCase();
+      ].whereType<Object>().join(' '));
       return pasaSede &&
           pasaComunidad &&
           (busqueda.isEmpty || texto.contains(busqueda));
@@ -1465,12 +1523,69 @@ class _AdminJfmScreenState extends State<AdminJfmScreen> {
             ],
           ),
         ),
-        body: StreamBuilder<QuerySnapshot>(
-          stream: _firestoreService.obtenerEncuestas(),
-          builder: (context, snapshot) {
+        body: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 1280),
+            child: StreamBuilder<QuerySnapshot>(
+              stream: _firestoreService.obtenerEncuestas(),
+              builder: (context, snapshot) {
             if (snapshot.connectionState == ConnectionState.waiting &&
                 !snapshot.hasData) {
-              return const Center(child: CircularProgressIndicator());
+              return const Center(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    CircularProgressIndicator(),
+                    SizedBox(height: 12),
+                    Text('Cargando reportes…'),
+                  ],
+                ),
+              );
+            }
+            if (snapshot.hasError) {
+              return Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(28),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(
+                        Icons.cloud_off_outlined,
+                        size: 42,
+                        color: Color(0xFF9A3E35),
+                      ),
+                      const SizedBox(height: 12),
+                      const Text(
+                        'No se pudieron cargar los reportes',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontSize: 17,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      const Text(
+                        'Verifica tu conexión y que tu cuenta tenga permisos de administración.',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          color: Color(0xFF625B56),
+                          height: 1.4,
+                        ),
+                      ),
+                      const SizedBox(height: 14),
+                      OutlinedButton.icon(
+                        onPressed: () => Navigator.of(context).pushReplacement(
+                          MaterialPageRoute<void>(
+                            builder: (_) => const AdminJfmScreen(),
+                          ),
+                        ),
+                        icon: const Icon(Icons.refresh),
+                        label: const Text('Volver a cargar'),
+                      ),
+                    ],
+                  ),
+                ),
+              );
             }
 
             final rawDocs = snapshot.data?.docs ?? [];
@@ -1501,6 +1616,8 @@ class _AdminJfmScreenState extends State<AdminJfmScreen> {
               ],
             );
           },
+            ),
+          ),
         ),
       ),
     );

@@ -40,12 +40,16 @@ class MyApp extends StatelessWidget {
     ),
     builder: (context, child) => LayoutBuilder(
       builder: (context, constraints) {
-        final isDesktop = constraints.maxWidth >= 900;
+        final maxAppWidth = constraints.maxWidth >= 900
+            ? 1440.0
+            : constraints.maxWidth >= 600
+            ? 760.0
+            : 430.0;
         return ColoredBox(
           color: const Color(0xFFEDE9E5),
           child: Center(
             child: ConstrainedBox(
-              constraints: BoxConstraints(maxWidth: isDesktop ? 1440 : 430),
+              constraints: BoxConstraints(maxWidth: maxAppWidth),
               child: child!,
             ),
           ),

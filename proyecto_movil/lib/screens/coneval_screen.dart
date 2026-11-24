@@ -61,7 +61,7 @@ class _ConevalScreenState extends State<ConevalScreen> {
         ? emailExistente!
         : widget.usuarioEmail ??
               FirebaseAuth.instance.currentUser?.email ??
-              'misionero_demo@anahuac.mx';
+              'Sin correo registrado';
     final sedes = sedesComunidadesJfm.keys.toList();
     final sede = _respuestas['sede']?.toString() ?? 'Anáhuac Cancún';
     _respuestas['sede'] = sedes.contains(sede) ? sede : sedes.first;
@@ -204,10 +204,14 @@ class _ConevalScreenState extends State<ConevalScreen> {
         ),
       );
       if (estado == 'completado' && cerrarAlGuardar) Navigator.pop(context);
-    } catch (error) {
+    } catch (_) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('No se pudo guardar el formulario: $error')),
+        const SnackBar(
+          content: Text(
+            'No se pudo guardar. Revisa tu conexión e intenta guardar de nuevo.',
+          ),
+        ),
       );
     } finally {
       if (mounted) setState(() => _guardando = false);
@@ -1611,18 +1615,22 @@ class _SignaturePadState extends State<SignaturePad> {
           borderRadius: BorderRadius.circular(8),
           color: const Color(0xFFFCFBFA),
         ),
-        child: GestureDetector(
-          onPanStart: (details) => setState(() {
-            _strokes.add([details.localPosition]);
-            _notify();
-          }),
-          onPanUpdate: (details) => setState(() {
-            if (_strokes.isNotEmpty) _strokes.last.add(details.localPosition);
-            _notify();
-          }),
-          child: CustomPaint(
-            painter: _SignaturePainter(_strokes),
-            child: const SizedBox.expand(),
+        child: Semantics(
+          label: 'Área de firma. Dibuja con el dedo o con el mouse.',
+          hint: 'Usa Limpiar firma para borrar y volver a intentarlo.',
+          child: GestureDetector(
+            onPanStart: (details) => setState(() {
+              _strokes.add([details.localPosition]);
+              _notify();
+            }),
+            onPanUpdate: (details) => setState(() {
+              if (_strokes.isNotEmpty) _strokes.last.add(details.localPosition);
+              _notify();
+            }),
+            child: CustomPaint(
+              painter: _SignaturePainter(_strokes),
+              child: const SizedBox.expand(),
+            ),
           ),
         ),
       ),

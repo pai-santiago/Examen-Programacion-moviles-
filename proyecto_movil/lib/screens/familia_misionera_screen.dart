@@ -36,7 +36,7 @@ class _FamiliaMisioneraScreenState extends State<FamiliaMisioneraScreen> {
   final Map<String, TextEditingController> _busquedas = {};
   int _pasoActual = 0;
   bool _guardando = false;
-  bool _sincronizadoEnNube = true;
+  bool _sincronizadoEnNube = false;
 
   static const List<String> _clavesListas = [
     'referencias_casa',
@@ -59,6 +59,7 @@ class _FamiliaMisioneraScreenState extends State<FamiliaMisioneraScreen> {
     _surveyId =
         widget.surveyIdExistente ??
         'jfm_${DateTime.now().millisecondsSinceEpoch}';
+    _sincronizadoEnNube = widget.surveyIdExistente != null;
     final emailExistente = widget.respuestasExistentes?['misionero_aplica']
         ?.toString()
         .trim();
@@ -66,7 +67,7 @@ class _FamiliaMisioneraScreenState extends State<FamiliaMisioneraScreen> {
         ? emailExistente!
         : widget.usuarioEmail ??
               FirebaseAuth.instance.currentUser?.email ??
-              'misionero_demo@anahuac.mx';
+              'Sin correo registrado';
 
     _respuestas = respuestasInicialesJfm(_misioneroEmail);
 
@@ -215,12 +216,14 @@ class _FamiliaMisioneraScreenState extends State<FamiliaMisioneraScreen> {
       if (estado == 'completado' && cerrarAlGuardar) {
         Navigator.pop(context);
       }
-    } catch (e) {
+    } catch (_) {
       if (!mounted) return;
       setState(() => _sincronizadoEnNube = false);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Guardado en modo local / sin red: $e'),
+          content: const Text(
+            'No se pudo guardar. Revisa tu conexión e intenta guardar de nuevo.',
+          ),
           backgroundColor: Colors.orange.shade800,
         ),
       );

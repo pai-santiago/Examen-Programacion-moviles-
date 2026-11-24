@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+
 import '../models/user_model.dart';
 
 class FirestoreService {
@@ -24,19 +25,41 @@ class FirestoreService {
       );
     }
 
-    final String uid = user.uid;
-    final String userEmail = (user.email ?? email).trim();
+    return _obtenerOCrearPerfil(
+      uid: user.uid,
+      email: (user.email ?? email).trim(),
+    );
+  }
 
-    final DocumentReference<Map<String, dynamic>> userDocRef =
-        _db.collection('users').doc(uid);
-    final DocumentSnapshot<Map<String, dynamic>> docSnap =
-        await userDocRef.get();
+  Future<UserModel> obtenerPerfilUsuarioActual() async {
+    final user = _auth.currentUser;
+    if (user == null) {
+      throw FirebaseAuthException(
+        code: 'user-null',
+        message: 'No hay una sesión activa.',
+      );
+    }
+
+    return _obtenerOCrearPerfil(
+      uid: user.uid,
+      email: (user.email ?? '').trim(),
+    );
+  }
+
+  Future<UserModel> _obtenerOCrearPerfil({
+    required String uid,
+    required String email,
+  }) async {
+    final String userEmail = email.trim();
+
+    final DocumentReference<Map<String, dynamic>> userDocRef = _db
+        .collection('users')
+        .doc(uid);
+    final DocumentSnapshot<Map<String, dynamic>> docSnap = await userDocRef
+        .get();
 
     if (!docSnap.exists || docSnap.data() == null) {
-      final nuevoUsuario = UserModel.nuevoPerfil(
-        uid: uid,
-        email: userEmail,
-      );
+      final nuevoUsuario = UserModel.nuevoPerfil(uid: uid, email: userEmail);
 
       await userDocRef.set({
         ...nuevoUsuario.toMap(),
@@ -65,9 +88,18 @@ class FirestoreService {
     List<Map<String, dynamic>> integrantes = const [],
     Map<String, dynamic>? resultadoPobreza,
   }) async {
+    final usuarioActual = _auth.currentUser;
+    if (usuarioActual == null) {
+      throw FirebaseException(
+        plugin: 'cloud_firestore',
+        code: 'unauthenticated',
+        message: 'Inicia sesión antes de guardar una encuesta.',
+      );
+    }
+
     final uid = encuestadorUid?.isNotEmpty == true
         ? encuestadorUid!
-        : _auth.currentUser?.uid ?? 'encuestador_anonimo';
+        : usuarioActual.uid;
 
     final data = {
       'id': surveyId,
@@ -83,7 +115,10 @@ class FirestoreService {
     };
 
     // SetOptions(merge: true) permite guardar avances (borradores) sin borrar lo anterior
-    await _db.collection('surveys').doc(surveyId).set(data, SetOptions(merge: true));
+    await _db
+        .collection('surveys')
+        .doc(surveyId)
+        .set(data, SetOptions(merge: true));
   }
 
   // Escucha en tiempo real todas las encuestas guardadas en la colección 'surveys'

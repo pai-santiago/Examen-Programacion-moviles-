@@ -12,20 +12,22 @@ class ConnectionStatusBanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colorEstado = sincronizadoEnNube
+    final colorEstado = guardando
+        ? const Color(0xFFB45200)
+        : sincronizadoEnNube
         ? const Color(0xFF168321)
-        : const Color(0xFFED6B00);
+        : const Color(0xFF625B56);
 
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       decoration: BoxDecoration(
-        color: sincronizadoEnNube
+        color: sincronizadoEnNube && !guardando
             ? const Color(0xFFEAF7EC)
             : const Color(0xFFFFF4E5),
         border: Border(
           bottom: BorderSide(
-            color: sincronizadoEnNube
+            color: sincronizadoEnNube && !guardando
                 ? const Color(0xFFB7E1CD)
                 : const Color(0xFFFFCC80),
           ),
@@ -34,22 +36,28 @@ class ConnectionStatusBanner extends StatelessWidget {
       child: Row(
         children: [
           Icon(
-            sincronizadoEnNube ? Icons.cloud_done : Icons.cloud_off,
+            guardando
+                ? Icons.cloud_sync_outlined
+                : sincronizadoEnNube
+                ? Icons.cloud_done
+                : Icons.cloud_upload_outlined,
             size: 16,
             color: colorEstado,
           ),
           const SizedBox(width: 8),
           Expanded(
             child: Text(
-              sincronizadoEnNube
-                  ? 'Conectado · Autoguardado en tiempo real (Local + Firestore)'
-                  : 'Modo Local Offline · Se sincronizará al recuperar red',
+              guardando
+                  ? 'Guardando respuestas en Firestore…'
+                  : sincronizadoEnNube
+                  ? 'Último guardado realizado en Firestore'
+                  : 'Sin guardar · Usa Guardar o Continuar para registrar el borrador',
               style: TextStyle(
                 fontSize: 11,
                 fontWeight: FontWeight.w600,
-                color: sincronizadoEnNube
+                color: sincronizadoEnNube && !guardando
                     ? const Color(0xFF168321)
-                    : const Color(0xFF8C3B00),
+                    : colorEstado,
               ),
             ),
           ),
