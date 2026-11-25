@@ -14,7 +14,6 @@ class LoginPage extends StatefulWidget {
 
 class _LoginPageState extends State<LoginPage> {
   final formKey = GlobalKey<FormState>();
-  final _firestoreService = FirestoreService();
   final _usuarioCtrl = TextEditingController();
   final _passwordCtrl = TextEditingController();
   bool _cargando = false;
@@ -57,12 +56,13 @@ class _LoginPageState extends State<LoginPage> {
   Future<void> _login() async {
     if (!formKey.currentState!.validate()) return;
 
+    final firestoreService = FirestoreService();
     final correoNormalizado = UserModel.normalizarCorreo(_usuarioCtrl.text);
     final password = _passwordCtrl.text;
 
     setState(() => _cargando = true);
     try {
-      final UserModel usuario = await _firestoreService
+      final UserModel usuario = await firestoreService
           .iniciarSesionYObtenerPerfil(
             email: correoNormalizado,
             password: password,
